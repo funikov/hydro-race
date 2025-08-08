@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HydroRace 💧</title>
+
+  <!-- Tailwind via CDN + конфиг -->
+  <script>
+    // Включаем dark mode по классу
+    window.tailwind = {};
+    window.tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
+          boxShadow: {
+            card: "0 10px 30px -10px rgba(2,6,23,0.25)",
+          },
+          colors: {
+            brand: {
+              50:  "#ecfeff",
+              100: "#cffafe",
+              200: "#a5f3fc",
+              300: "#67e8f9",
+              400: "#22d3ee",
+              500: "#06b6d4",
+              600: "#0891b2",
+              700: "#0e7490",
+              800: "#155e75",
+              900: "#164e63",
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Inter шрифт (не обязательно) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- React -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Анти-FoUC: применяем сохранённую тему до рендера -->
+  <script>
+    (function() {
+      const key = "hydro_theme";
+      const saved = localStorage.getItem(key);
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const wantDark = saved ? saved === "dark" : prefersDark;
+      if (wantDark) document.documentElement.classList.add("dark");
+      document.documentElement.style.colorScheme = wantDark ? "dark" : "light";
+    })();
+  </script>
+  <style>
+    html, body { height: 100%; }
+  </style>
+</head>
+
+<body class="h-full font-sans antialiased bg-gradient-to-br from-brand-50 via-white to-brand-100 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-100">
+  <div id="root" class="h-full"></div>
+
+  <script type="text/babel">
+    const STORAGE_KEY = "hydro_race_v3";
+    const THEME_KEY = "hydro_theme";
+
+    const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
+    const fmtLiters = (ml) => (ml / 1000).toFixed(2).replace(/\.00$/, "") + " л";
+    const fmtPct = (x) => Math.round(x * 100) + "%";
+    const todayISO = (d = new Date()) => d.toISOString().slice(0, 10);
+    const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    const isSameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
+    const isSameYear = (a,b) => a.getFullYear()===b.getFullYear();
+
+    const DEFAULT_DRINKS = [
+      { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
+      { id:"tea",         name:"Чай",             emoji:"🍵", waterFraction:0.99 },
+      { id:"milk",        name:"Молоко",          emoji:"🥛", waterFraction:0.87 },
+      { id:"cola_light",  name:"Кола Лайт",       emoji:"🥤", waterFraction:0.99 },
+      { id:"cola_zero",   name:"Кола без сахара", emoji:"🥤", waterFraction:0.99 },
+      { id:"kvass",       name:"Квас",            emoji:"🍺", waterFraction:0.96 },
+      { id:"juice",       name:"Сок",             emoji:"🧃", waterFraction:0.88 },
+      { id:"lemonade",    name:"Лимонад",         emoji:"🍋", waterFraction:0.90 },
+    ];
+
+    function cx(...classes){ return classes.filter(Boolean).join(" "); }
+
+    function App(){
+      const [state,setState] = React.useState(()=>{
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if(saved){
+          try{
+            const s = JSON.parse(saved);
+            if (Array.isArray(s.entries)) {
+              s.entries = s.entries.map(e => e.drinkId ? e : {...e, drinkId: "water"});
+            }
+            if (!Array.isArray(s.drinksConfig) || !s.drinksConfig.length) {
+              s.drinksConfig = DEFAULT_DRINKS;
+            }
+            return s;
+          }catch{}
+        }
+        return {
+          users:[{id:crypto.randomUUID(),name:"Аня"},{id:crypto.randomUUID(),name:"Иван"}],
+          entries:[],
+          drinksConfig: DEFAULT_DRINKS,
+          currentUserId:null
+        };
+      });
+
+      React.useEffect(()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(state)),[state]);
+
+      React.useEffect(()=>{
+        if(!state.currentUserId && state.users.length){
+          setState(s=>({...s,currentUserId:s.users[0].id}));
+        }
+      },[]);
+
+      // тема
+      const [theme, setTheme] = React.useState(()=>{
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved) return saved;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      });
+      React.useEffect(()=>{
+        const root = document.documentElement;
+        if(theme === "dark"){ root.classList.add("dark"); }
+        else { root.classList.remove("dark"); }
+        root.style.colorScheme = theme;
+        localStorage.setItem(THEME_KEY, theme);
+      }, [theme]);
+
+      const [period,setPeriod]=React.useState("day");
+      const [selectedDate,setSelectedDate]=React.useState(todayISO());
+      const [drinkId,setDrinkId]=React.useState("water");
+      const [showDrinkSettings,setShowDrinkSettings]=React.useState(false);
+
+      const drinkById = React.useMemo(()=>{
+        const m=new Map();
+        state.drinksConfig.forEach(d=>m.set(d.id,d));
+        return m;
+      },[state.drinksConfig]);
+
+      const entriesForPeriod = React.useMemo(()=>{
+        const sel=new Date(selectedDate+"T12:00:00");
+        return state.entries.filter(e=>{
+          const d=new Date(e.ts);
+          if(period==="day")return sameDay(d,sel);
+          if(period==="month")return isSameMonth(d,sel);
+          if(period==="year")return isSameYear(d,sel);
+        });
+      },[state.entries,selectedDate,period]);
+
+      const totalsByUser=React.useMemo(()=>{
+        const mapWater=new Map(); const mapTotal=new Map();
+        for(const u of state.users){ mapWater.set(u.id,0); mapTotal.set(u.id,0); }
+        for(const e of entriesForPeriod){
+          const drink = drinkById.get(e.drinkId) || {waterFraction:1};
+          const waterMl = Math.round(e.ml * (drink.waterFraction ?? 1));
+          mapWater.set(e.userId,(mapWater.get(e.userId)||0)+waterMl);
+          mapTotal.set(e.userId,(mapTotal.get(e.userId)||0)+e.ml);
+        }
+        return state.users
+          .map(u=>({ userId:u.id, name:u.name, waterMl:mapWater.get(u.id)||0, totalMl:mapTotal.get(u.id)||0 }))
+          .sort((a,b)=>b.waterMl-a.waterMl);
+      },[entriesForPeriod,state.users,drinkById]);
+
+      const historyForUser=React.useMemo(()=>{
+        return state.entries
+          .filter(e=>e.userId===state.currentUserId)
+          .sort((a,b)=>new Date(b.ts)-new Date(a.ts))
+          .slice(0,20);
+      },[state.entries,state.currentUserId]);
+
+      function addUser(name){
+        name = name.trim();
+        if(!name) return;
+        if(state.users.some(u=>u.name.toLowerCase()===name.toLowerCase())) return;
+        const u={id:crypto.randomUUID(),name};
+        setState(s=>({...s,users:[...s.users,u],currentUserId:u.id}));
+      }
+
+      function addDrink(ml){
+        if(!state.currentUserId) return;
+        const entry={id:crypto.randomUUID(),userId:state.currentUserId,ml,drinkId,ts:new Date().toISOString()};
+        setState(s=>({...s,entries:[entry,...s.entries]}));
+      }
+
+      function undoLastForCurrent(){
+        const idx=state.entries.findIndex(e=>e.userId===state.currentUserId);
+        if(idx===-1) return;
+        setState(s=>({...s,entries:s.entries.filter((_,i)=>i!==idx)}));
+      }
+
+      function deleteUser(userId){
+        setState(s=>({
+          ...s,
+          users:s.users.filter(u=>u.id!==userId),
+          entries:s.entries.filter(e=>e.userId!==userId),
+          currentUserId: s.currentUserId===userId && s.users.length>1 ? s.users[0].id : s.currentUserId
+        }));
+      }
+
+      function exportData(){
+        const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;a.download=`hydro-race-${todayISO()}.json`;
+        document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove();
+      }
+
+      function importData(file){
+        const reader=new FileReader();
+        reader.onload=e=>{
+          try{
+            const data=JSON.parse(e.target.result);
+            if(data && Array.isArray(data.users) && Array.isArray(data.entries)){
+              if(!Array.isArray(data.drinksConfig) || !data.drinksConfig.length){
+                data.drinksConfig = DEFAULT_DRINKS;
+              }
+              setState(data);
+              setDrinkId("water");
+            }
+          }catch{
+            alert("Не удалось импортировать файл");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function updateDrinkFraction(id,newFraction){
+        newFraction = Math.max(0, Math.min(1, newFraction));
+        setState(s=>({
+          ...s,
+          drinksConfig: s.drinksConfig.map(d=>d.id===id? {...d, waterFraction:newFraction}: d)
+        }));
+      }
+
+      const currentUser=state.users.find(u=>u.id===state.currentUserId);
+      const selectedDrink = drinkById.get(drinkId) || state.drinksConfig[0];
+
+      const Card = ({children, className})=>(
+        <div className={cx(
+          "rounded-2xl border shadow-card",
+          "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
+          "dark:bg-slate-800/60 dark:border-slate-700",
+          className
+        )}>{children}</div>
+      );
+
+      const SegBtn = ({active, children, onClick})=>(
+        <button
+          onClick={onClick}
+          className={cx(
+            "px-3 py-2 text-sm transition-colors",
+            active
+              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+              : "bg-white/70 dark:bg-slate-800/60"
+          )}
+        >{children}</button>
+      );
+
+      return (
+        <div className="min-h-full p-4 md:p-8">
+          <div className="max-w-6xl mx-auto grid gap-6">
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  HydroRace <span className="align-middle">💧</span>
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Рейтинг по <span className="font-semibold">водному эквиваленту</span>: учитываем долю воды в напитке
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Card className="p-1 border-none shadow-none">
+                  <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
+                    <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
+                    <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
+                  </div>
+                </Card>
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"
+                />
+
+                <button
+                  onClick={()=>setTheme(theme==="dark"?"light":"dark")}
+                  className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition"
+                  title="Переключить тему"
+                >
+                  {theme==="dark" ? "🌙 Dark" : "🌞 Light"}
+                </button>
+              </div>
+            </div>
+
+            {/* Main grid */}
+            <section className="grid lg:grid-cols-3 gap-6">
+
+              {/* Users */}
+              <Card className="p-4">
+                <h2 className="font-semibold mb-3">Участники</h2>
+                <div className="flex gap-2 mb-3">
+                  <select
+                    value={state.currentUserId || ""}
+                    onChange={(e) => setState((s) => ({ ...s, currentUserId: e.target.value }))}
+                    className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"
+                  >
+                    {state.users.map((u) => (<option key={u.id} value={u.id}>{u.name}</option>))}
+                  </select>
+                  <button
+                    className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition"
+                    onClick={() => { const name = prompt("Имя участника?"); if (name) addUser(name); }}
+                  >+ Добавить</button>
+                </div>
+                <ul className="space-y-1 text-sm">
+                  {state.users.map((u) => (
+                    <li key={u.id} className="flex items-center justify-between">
+                      <span>{u.name}</span>
+                      <button className="text-xs text-rose-600 dark:text-rose-400 hover:underline" onClick={() => deleteUser(u.id)}>Удалить</button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+
+              {/* Add drink */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold">Добавить напиток {currentUser ? `для ${currentUser.name}` : ""}</h2>
+                  <button className="text-sm underline decoration-dashed underline-offset-4" onClick={()=>setShowDrinkSettings(true)}>⚙️ Настройки напитков</button>
+                </div>
+
+                <div className="mb-3">
+                  <div className="flex gap-2 overflow-auto pb-1">
+                    {state.drinksConfig.map(d=>(
+                      <button
+                        key={d.id}
+                        onClick={()=>setDrinkId(d.id)}
+                        className={cx(
+                          "px-3 py-2 rounded-xl border whitespace-nowrap transition",
+                          "border-slate-200 dark:border-slate-700",
+                          drinkId===d.id
+                            ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300"
+                            : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
+                        )}
+                        title={`Доля воды: ${fmtPct(d.waterFraction)}`}
+                      >
+                        <span className="mr-1">{d.emoji}</span>{d.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
+                    Выбрано: <strong>{selectedDrink?.emoji} {selectedDrink?.name}</strong> — доля воды {fmtPct(selectedDrink?.waterFraction ?? 1)}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => addDrink(ML.glass)}>
+                    🥛 Стакан
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.glass)}</div>
+                  </button>
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => addDrink(ML.bottle05)}>
+                    🧴 Бутылка 0.5
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle05)}</div>
+                  </button>
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => addDrink(ML.bottle15)}>
+                    🧴 Бутылка 1.5
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle15)}</div>
+                  </button>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <button className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition" onClick={undoLastForCurrent}>↩️ Отменить последний</button>
+                  <button className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition" onClick={exportData}>⬇️ Экспорт JSON</button>
+                  <label className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer inline-block hover:brightness-95 transition">
+                    ⬆️ Импорт JSON
+                    <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files && importData(e.target.files[0])} />
+                  </label>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="text-sm font-semibold mb-1">Недавние записи</h3>
+                  <ul className="text-sm max-h-40 overflow-auto space-y-1">
+                    {historyForUser.map((e) => {
+                      const d = drinkById.get(e.drinkId) || {emoji:"",name:"",waterFraction:1};
+                      const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
+                      return (
+                        <li key={e.id} className="flex justify-between">
+                          <span>{d.emoji} {d.name} — {fmtLiters(e.ml)} <span className="text-slate-500 dark:text-slate-400">(вода: {fmtLiters(waterMl)})</span></span>
+                          <span className="text-slate-500 dark:text-slate-400">{new Date(e.ts).toLocaleString()}</span>
+                        </li>
+                      );
+                    })}
+                    {!historyForUser.length && <li className="text-slate-500 dark:text-slate-400">Пока нет записей</li>}
+                  </ul>
+                </div>
+              </Card>
+
+              {/* Leaderboard */}
+              <Card className="p-4">
+                <h2 className="font-semibold mb-3">Таблица лидеров — {period === "day" ? "за день" : period === "month" ? "за месяц" : "за год"}</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">
+                  Рейтинг по <strong>водному эквиваленту</strong>
+                </p>
+                <ol className="space-y-2">
+                  {totalsByUser.map((t, i) => (
+                    <li key={t.userId} className="flex items-center justify-between rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/50">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 text-center font-bold">{i + 1}</span>
+                        <span className="font-medium">{t.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{fmtLiters(t.waterMl)} воды</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">всего выпито: {fmtLiters(t.totalMl)}</div>
+                      </div>
+                    </li>
+                  ))}
+                  {!totalsByUser.length && <li className="text-slate-500 dark:text-slate-400">Нет данных</li>}
+                </ol>
+              </Card>
+            </section>
+
+            {/* Feed */}
+            <Card className="p-4">
+              <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
+              <ul className="space-y-1 text-sm max-h-80 overflow-auto">
+                {entriesForPeriod
+                  .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+                  .map((e) => {
+                    const u = state.users.find((x) => x.id === e.userId);
+                    const d = drinkById.get(e.drinkId) || {emoji:"",name:"",waterFraction:1};
+                    const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
+                    return (
+                      <li key={e.id} className="flex items-center justify-between">
+                        <span><strong>{u?.name}</strong> — {d.emoji} {d.name} • {fmtLiters(e.ml)} <span className="text-slate-500 dark:text-slate-400">(вода: {fmtLiters(waterMl)})</span></span>
+                        <span className="text-slate-500 dark:text-slate-400">{new Date(e.ts).toLocaleString()}</span>
+                      </li>
+                    );
+                  })}
+                {!entriesForPeriod.length && <li className="text-slate-500 dark:text-slate-400">Нет записей за период</li>}
+              </ul>
+            </Card>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 text-center py-2">
+              Сделано на React + Tailwind. Данные сохраняются в localStorage.
+            </p>
+          </div>
+
+          {/* Drink Settings Modal */}
+          {showDrinkSettings && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="max-w-2xl w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 shadow-card">
+                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                  <h3 className="font-semibold text-lg">Настройки напитков</h3>
+                  <button className="text-sm underline" onClick={()=>setShowDrinkSettings(false)}>Закрыть</button>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">
+                    Изменяй долю воды (0–100%). Рейтинг считает: водный эквивалент = объём × доля воды.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {state.drinksConfig.map(d=>(
+                      <div key={d.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-white/70 dark:bg-slate-800/60">
+                        <div className="font-medium">{d.emoji} {d.name}</div>
+                        <label className="text-sm mt-2 block">
+                          Доля воды:
+                          <input
+                            type="number" min="0" max="100" step="1"
+                            value={Math.round((d.waterFraction ?? 1)*100)}
+                            onChange={(e)=>updateDrinkFraction(d.id, (Number(e.target.value)||0)/100)}
+                            className="ml-2 w-20 px-2 py-1 border rounded-lg bg-transparent border-slate-200 dark:border-slate-700"
+                          />%
+                        </label>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                          Сейчас считается как {fmtPct(d.waterFraction ?? 1)} от объёма.
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
+  </script>
+</body>
+</html>
+
