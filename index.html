@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HydroRace 💧</title>
 
+  <!-- Tailwind (dark mode по классу) -->
   <script>
     window.tailwind = {};
     window.tailwind.config = {
@@ -15,13 +16,14 @@
           boxShadow: { card: "0 10px 30px -10px rgba(2,6,23,0.25)" },
           colors: {
             brand: {50:"#ecfeff",100:"#cffafe",200:"#a5f3fc",300:"#67e8f9",400:"#22d3ee",500:"#06b6d4",600:"#0891b2",700:"#0e7490",800:"#155e75",900:"#164e63"}
-          },
-        },
-      },
+          }
+        }
+      }
     };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -36,6 +38,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- предотвращаем мигание темы -->
   <script>
     (function() {
       const key = "hydro_theme";
@@ -53,12 +56,12 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init (вставь сюда ACTUAL конфиг из консоли Firebase) ======
+    // ========= Firebase init: ВСТАВЬ СВОЙ АКТУАЛЬНЫЙ КОНФИГ ИЗ КОНСОЛИ =========
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "<<<COPIED_FROM_FIREBASE_CONSOLE>>>",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
-      storageBucket: "hydro-race.firebasestorage.app",
+      storageBucket: "hydro-race.appspot.com",
       messagingSenderId: "644586947662",
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
@@ -66,34 +69,24 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
-    // ====== Auth: persistence + redirect result ======
+    // --- Храним сессию локально, обрабатываем возможные ошибки ---
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
       console.warn("[AUTH] setPersistence error:", e);
-      alert("setPersistence error: " + (e?.code || "") + " — " + (e?.message || ""));
     });
-
+    // --- Если вернулись после redirect (на мобиле/при попап-блоках) ---
     auth.getRedirectResult()
-      .then((res) => {
-        if (res?.user) console.log("[AUTH] Redirect ✓ user:", res.user.uid);
-      })
-      .catch((err) => {
-        console.warn("[AUTH] Redirect error:", err);
-        alert("Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
-      });
+      .then(res => { if (res?.user) console.log("[AUTH] redirect OK:", res.user.uid); })
+      .catch(err => console.warn("[AUTH] redirect error:", err));
 
-    // ====== Utils ======
-    const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1";
+    // ========= Утилиты / константы =========
     const THEME_KEY = "hydro_theme";
     const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
     const fmtLiters = (ml) => (ml / 1000).toFixed(2).replace(/\.00$/, "") + " л";
-    const fmtPct = (x) => Math.round(x * 100) + "%";
     const todayISO = (d = new Date()) => d.toISOString().slice(0, 10);
-    const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-    const isSameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
-    const isSameYear = (a,b) => a.getFullYear()===b.getFullYear();
+    const sameDay    = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+    const isSameMonth= (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
+    const isSameYear = (a,b)=> a.getFullYear()===b.getFullYear();
     const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
-    function cx(...classes){ return classes.filter(Boolean).join(" "); }
-
     const DEFAULT_DRINKS = [
       { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
       { id:"tea",         name:"Чай",             emoji:"🍵", waterFraction:0.99 },
@@ -104,8 +97,9 @@
       { id:"juice",       name:"Сок",             emoji:"🧃", waterFraction:0.88 },
       { id:"lemonade",    name:"Лимонад",         emoji:"🍋", waterFraction:0.90 },
     ];
+    function cx(...c){return c.filter(Boolean).join(" ");}
 
-    // ====== Hooks ======
+    // ========= Hooks =========
     function useTheme(){
       const [theme, setTheme] = React.useState(()=>{
         const saved = localStorage.getItem(THEME_KEY);
@@ -113,91 +107,52 @@
       });
       React.useEffect(()=>{
         const root = document.documentElement;
-        if(theme === "dark"){ root.classList.add("dark"); }
-        else { root.classList.remove("dark"); }
+        if(theme==="dark") root.classList.add("dark"); else root.classList.remove("dark");
         root.style.colorScheme = theme;
         localStorage.setItem(THEME_KEY, theme);
-      }, [theme]);
+      },[theme]);
       return { theme, setTheme };
     }
 
-    // — вход: сначала popup (быстрее), если среда не поддерживает — fallback на redirect
-    function useAuth() {
-      const [user, setUser] = React.useState(null);
-      React.useEffect(() => auth.onAuthStateChanged((u)=>{ console.log("[AUTH] state:", u?.uid||null); setUser(u); }), []);
-
-      const signInGoogle = React.useCallback(async () => {
+    // Вход: пробуем popup, при проблемах — redirect
+    function useAuth(){
+      const [user,setUser] = React.useState(null);
+      React.useEffect(()=>auth.onAuthStateChanged((u)=>{console.log("[AUTH] state:",u?.uid||null); setUser(u);}),[]);
+      const signInGoogle = React.useCallback(async ()=>{
         const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        try {
-          await auth.signInWithPopup(provider);
-          return;
-        } catch (err) {
+        provider.setCustomParameters({ prompt:"select_account" });
+        try { await auth.signInWithPopup(provider); return; }
+        catch(err){
           console.warn("[AUTH] popup error:", err?.code, err?.message);
-          const fallback =
-            err?.code === "auth/operation-not-supported-in-this-environment" ||
-            err?.code === "auth/popup-blocked" ||
-            err?.code === "auth/popup-closed-by-user";
-          if (!fallback) {
-            alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-            return;
-          }
+          const fallback = ["auth/operation-not-supported-in-this-environment","auth/popup-blocked","auth/popup-closed-by-user"].includes(err?.code);
+          if(!fallback){ alert("Google Sign-in: "+(err?.code||"")+" — "+(err?.message||"")); return; }
         }
-        try { await auth.signInWithRedirect(provider); }
-        catch (err) {
-          console.warn("[AUTH] redirect error:", err);
-          alert("Google Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
-        }
-      }, []);
-
-      const signInAnon = React.useCallback(()=>auth.signInAnonymously().catch((e)=>{
-        console.warn("[AUTH] anon error:", e); alert("Anon sign-in error: " + (e?.code||"") + " — " + (e?.message||""));
-      }),[]);
+        try{ await auth.signInWithRedirect(provider); }
+        catch(err){ console.warn("[AUTH] redirect error:", err); alert("Redirect: "+(err?.code||"")+" — "+(err?.message||"")); }
+      },[]);
+      const signInAnon = React.useCallback(()=>auth.signInAnonymously().catch(e=>alert("Anon: "+(e?.code||"")+" — "+(e?.message||""))),[]);
       const signOut = React.useCallback(()=>auth.signOut(),[]);
       return { user, signInGoogle, signInAnon, signOut };
     }
 
-    function useDrinksConfig(){
-      const [drinks, setDrinks] = React.useState(()=>{
-        const saved = localStorage.getItem(STORAGE_KEY_DRINKS);
-        if(saved){ try { const d = JSON.parse(saved); if(Array.isArray(d) && d.length) return d; } catch {} }
-        return DEFAULT_DRINKS;
-      });
-      React.useEffect(()=>localStorage.setItem(STORAGE_KEY_DRINKS, JSON.stringify(drinks)), [drinks]);
-      const drinkById = React.useMemo(()=> {
-        const m = new Map();
-        drinks.forEach(d => m.set(d.id, d));
-        return m;
-      }, [drinks]);
-      function updateDrinkFraction(id, newFraction){
-        newFraction = Math.max(0, Math.min(1, newFraction));
-        setDrinks(ds => ds.map(d => d.id===id ? {...d, waterFraction:newFraction} : d));
-      }
-      return { drinks, setDrinks, drinkById, updateDrinkFraction };
-    }
+    function getHashRoomId(){ const m = location.hash.match(/room=([A-Za-z0-9_-]+)/); return m ? m[1] : ""; }
 
-    function getHashRoomId(){
-      const m = location.hash.match(/room=([A-Za-z0-9_-]+)/);
-      return m ? m[1] : "";
-    }
-
-    function useRoom(roomId) {
-      const [entries, setEntries] = React.useState([]);
-      const [members, setMembers] = React.useState([]);
-      React.useEffect(() => {
-        if (!roomId) return;
-        const un1 = db.collection("rooms").doc(roomId).collection("entries")
-          .orderBy("ts", "desc")
-          .onSnapshot(snap => setEntries(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    function useRoom(roomId){
+      const [entries,setEntries] = React.useState([]);
+      const [members,setMembers] = React.useState([]);
+      React.useEffect(()=>{
+        if(!roomId) return;
+        const un1 = db.collection("rooms").doc(roomId).collection("entries").orderBy("ts","desc")
+          .onSnapshot(s=>setEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
         const un2 = db.collection("rooms").doc(roomId).collection("members")
-          .onSnapshot(snap => setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-        return () => { un1(); un2(); };
-      }, [roomId]);
+          .onSnapshot(s=>setMembers(s.docs.map(d=>({id:d.id,...d.data()}))));
+        return ()=>{un1();un2();};
+      },[roomId]);
       return { entries, members };
     }
 
-    // ====== Firestore ops ======
-    async function createRoom(name, ownerId) {
+    // ========= Firestore ops =========
+    async function createRoom(name, ownerId){
       const ref = await db.collection("rooms").add({
         name: name || "Новая комната",
         ownerId: ownerId || null,
@@ -205,18 +160,16 @@
       });
       return ref.id;
     }
-
-    async function joinRoom(roomId, user, name) {
-      if (!roomId || !user) return;
+    async function joinRoom(roomId, user, name){
+      if(!roomId||!user) return;
       await db.collection("rooms").doc(roomId).collection("members").doc(user.uid).set({
         userId: user.uid,
         name: name || user.displayName || "Гость",
         joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      },{merge:true});
     }
-
-    async function addDrinkCloud(roomId, user, { ml, drinkId, userName }) {
-      if (!roomId || !user) return;
+    async function addDrinkCloud(roomId,user,{ml,drinkId,userName}){
+      if(!roomId||!user) return;
       await db.collection("rooms").doc(roomId).collection("entries").add({
         userId: user.uid,
         userName: userName || "Гость",
@@ -225,79 +178,110 @@
         ts: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-
-    async function undoLastForCurrentCloud(roomId, user) {
-      if (!roomId || !user) return;
+    async function undoLastForCurrentCloud(roomId,user){
+      if(!roomId||!user) return;
       const q = await db.collection("rooms").doc(roomId).collection("entries")
-        .where("userId","==", user.uid).orderBy("ts","desc").limit(1).get();
-      if (!q.empty) await q.docs[0].ref.delete();
+        .where("userId","==",user.uid).orderBy("ts","desc").limit(1).get();
+      if(!q.empty) await q.docs[0].ref.delete();
     }
-
-    // ====== User profile (lastRoomId) ======
-    async function setUserLastRoom(uid, roomId) {
-      if (!uid) return;
+    async function setUserLastRoom(uid,roomId){
+      if(!uid) return;
       await db.collection("users").doc(uid).set({
         lastRoomId: roomId || "",
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      },{merge:true});
     }
-    async function getUserLastRoom(uid) {
-      if (!uid) return "";
-      const snap = await db.collection("users").doc(uid).get();
-      return snap.exists ? (snap.data().lastRoomId || "") : "";
-    }
-
-    // — найти любую комнату по членству (если lastRoomId пуст)
-    async function findAnyRoomForUser(uid) {
-      const snap = await db.collectionGroup("members").where("userId","==", uid).get();
-      if (snap.empty) return "";
-      // выберем самую «свежую» по joinedAt или по созданию комнаты
-      let best = { id:"", at: 0 };
-      for (const doc of snap.docs) {
-        const roomRef = doc.ref.parent.parent; if (!roomRef) continue;
-        const m = doc.data() || {};
-        let at = m?.joinedAt?.toMillis?.() || 0;
-        if (!at) {
-          const rs = await roomRef.get();
-          at = rs?.data?.()?.createdAt?.toMillis?.() || 0;
-        }
-        if (at > best.at) best = { id: roomRef.id, at };
-      }
-      return best.id;
+    async function getUserLastRoom(uid){
+      if(!uid) return "";
+      const s = await db.collection("users").doc(uid).get();
+      return s.exists ? (s.data()?.lastRoomId || "") : "";
     }
 
-    // ====== Мои комнаты (список) ======
+    // ========= Авто-подключение к комнате (реактивно) =========
+    function useAutoRoom(user, roomId, setRoomId){
+      React.useEffect(()=>{
+        if(!user) return;
+        let picked = false;
+
+        // 1) слушаем все членства пользователя
+        const unsub = db.collectionGroup("members")
+          .where("userId","==",user.uid)
+          .onSnapshot(async (snap)=>{
+            if(picked || roomId) return;
+            if(snap.empty) return;
+            let best = { id:"", at:0 };
+            for(const doc of snap.docs){
+              const ref = doc.ref.parent.parent; if(!ref) continue;
+              const at = doc.data()?.joinedAt?.toMillis?.() || 0;
+              if(at >= best.at) best = { id: ref.id, at };
+            }
+            if(best.id){
+              picked = true;
+              setRoomId(best.id);
+              await joinRoom(best.id, user, user.displayName || "Гость");
+              await setUserLastRoom(user.uid, best.id);
+            }
+          }, (err)=>console.warn("[AUTO-ROOM] members listener:", err));
+
+        // 2) бэкап: если членства нет — пробуем комнаты, где он владелец
+        (async ()=>{
+          try{
+            if(picked || roomId) return;
+            const q = await db.collection("rooms").where("ownerId","==",user.uid)
+                               .orderBy("createdAt","desc").limit(1).get();
+            if(!q.empty && !picked && !roomId){
+              const id = q.docs[0].id;
+              picked = true;
+              setRoomId(id);
+              await joinRoom(id, user, user.displayName || "Гость");
+              await setUserLastRoom(user.uid, id);
+            }
+          }catch(e){ console.warn("[AUTO-ROOM] owner fallback:", e); }
+        })();
+
+        // 3) ещё один бэкап: если у пользователя был lastRoomId — подтянем
+        (async ()=>{
+          try{
+            if(picked || roomId) return;
+            const last = await getUserLastRoom(user.uid);
+            if(last){
+              picked = true;
+              setRoomId(last);
+              await joinRoom(last, user, user.displayName || "Гость");
+            }
+          }catch(e){ console.warn("[AUTO-ROOM] lastRoomId fallback:", e); }
+        })();
+
+        return ()=>unsub && unsub();
+      },[user, roomId, setRoomId]);
+    }
+
+    // ========= Список моих комнат =========
     function useMyRooms(user){
-      const [myRooms, setMyRooms] = React.useState([]);
+      const [myRooms,setMyRooms] = React.useState([]);
       React.useEffect(()=>{
         if(!user){ setMyRooms([]); return; }
-        const q = db.collectionGroup("members").where("userId","==", user.uid);
+        const q = db.collectionGroup("members").where("userId","==",user.uid);
         const unsub = q.onSnapshot(async (snap)=>{
           try{
             const arr = await Promise.all(snap.docs.map(async d=>{
-              const roomRef = d.ref.parent.parent;
-              if (!roomRef) return null;
-              const roomSnap = await roomRef.get();
-              return roomSnap.exists ? { id: roomRef.id, ...roomSnap.data() } : null;
+              const roomRef = d.ref.parent.parent; if(!roomRef) return null;
+              const rs = await roomRef.get();
+              return rs.exists ? { id: roomRef.id, ...rs.data() } : null;
             }));
-            const seen = new Set();
-            const unique = [];
+            const seen = new Set(), unique = [];
             for(const r of arr){ if(r && !seen.has(r.id)){ seen.add(r.id); unique.push(r); } }
-            unique.sort((a,b)=> (b?.createdAt?.toMillis?.()||0) - (a?.createdAt?.toMillis?.()||0));
+            unique.sort((a,b)=> (b?.createdAt?.toMillis?.()||0)-(a?.createdAt?.toMillis?.()||0));
             setMyRooms(unique);
-          }catch(err){
-            console.warn("[MYROOMS] build list error:", err);
-          }
-        }, (err)=>{
-          console.warn("[MYROOMS] snapshot error:", err);
-        });
-        return () => unsub && unsub();
-      }, [user]);
+          }catch(err){ console.warn("[MYROOMS] build:", err); }
+        }, err=>console.warn("[MYROOMS] listener:", err));
+        return ()=>unsub && unsub();
+      },[user]);
       return myRooms;
     }
 
-    // ====== Delete / Leave ======
-    async function deleteCollectionDeep(colRef, batchSize=200){
+    // ========= Delete/Leave =========
+    async function deleteCollectionDeep(colRef,batchSize=200){
       let snap = await colRef.limit(batchSize).get();
       while(!snap.empty){
         const batch = db.batch();
@@ -309,26 +293,24 @@
     async function deleteRoomDeep(roomId, currentUser){
       if(!roomId) return;
       const roomRef = db.collection("rooms").doc(roomId);
-      const roomSnap = await roomRef.get();
-      if(!roomSnap.exists) return;
+      const roomSnap = await roomRef.get(); if(!roomSnap.exists) return;
       const data = roomSnap.data() || {};
-      if (data.ownerId && currentUser && data.ownerId !== currentUser.uid) {
-        alert("Удалять комнату может только владелец.");
-        return;
+      if(data.ownerId && currentUser && data.ownerId !== currentUser.uid){
+        alert("Удалять комнату может только владелец."); return;
       }
-      if(!confirm("Точно удалить комнату и все записи? Действие необратимо.")) return;
+      if(!confirm("Удалить комнату и все записи? Это необратимо.")) return;
       await deleteCollectionDeep(roomRef.collection("entries"));
       await deleteCollectionDeep(roomRef.collection("members"));
       await roomRef.delete();
     }
     async function leaveRoom(roomId, currentUser){
-      if(!roomId || !currentUser) return;
+      if(!roomId||!currentUser) return;
       if(!confirm("Покинуть эту комнату?")) return;
       await db.collection("rooms").doc(roomId).collection("members").doc(currentUser.uid).delete();
     }
 
-    // ====== UI atoms ======
-    const Card = ({children, className})=>(
+    // ========= UI атомы =========
+    const Card = ({children,className}) => (
       <div className={cx(
         "rounded-2xl border shadow-card",
         "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
@@ -336,123 +318,93 @@
         className
       )}>{children}</div>
     );
-    const SegBtn = ({active, children, onClick})=>(
+    const SegBtn = ({active,children,onClick}) => (
       <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
         active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                : "bg-white/70 dark:bg-slate-800/60"
       )}>{children}</button>
     );
 
-    // ====== App ======
+    // ========= App =========
     function App(){
       const { theme, setTheme } = useTheme();
       const { user, signInGoogle, signInAnon, signOut } = useAuth();
 
-      const [period,setPeriod]=React.useState("day");
-      const [selectedDate,setSelectedDate]=React.useState(todayISO());
-      const [drinkId,setDrinkId]=React.useState("water");
-      const [showDrinkSettings,setShowDrinkSettings]=React.useState(false);
+      const [period,setPeriod] = React.useState("day");
+      const [selectedDate,setSelectedDate] = React.useState(todayISO());
+      const [drinkId,setDrinkId] = React.useState("water");
       const [roomId, setRoomId] = React.useState(getHashRoomId());
       const [displayName, setDisplayName] = React.useState("");
 
+      // hash <-> state
+      React.useEffect(()=>{
+        const onHash = ()=> setRoomId(getHashRoomId());
+        addEventListener("hashchange", onHash);
+        return ()=> removeEventListener("hashchange", onHash);
+      },[]);
+      React.useEffect(()=>{
+        if(roomId){
+          const h = `#room=${roomId}`;
+          if(location.hash !== h) history.replaceState(null,"",h);
+        }else if(location.hash){ history.replaceState(null,""," "); }
+      },[roomId]);
+
+      // Автоподключение к комнате пользователя (реактивно)
+      useAutoRoom(user, roomId, setRoomId);
+
       const myRooms = useMyRooms(user);
-
-      // sync hash <-> state
-      React.useEffect(()=>{
-        const onHash = () => setRoomId(getHashRoomId());
-        window.addEventListener("hashchange", onHash);
-        return () => window.removeEventListener("hashchange", onHash);
-      }, []);
-      React.useEffect(()=>{
-        if (roomId) {
-          const hash = `#room=${roomId}`;
-          if (location.hash !== hash) history.replaceState(null, "", hash);
-        } else if (location.hash) {
-          history.replaceState(null, "", " ");
-        }
-      }, [roomId]);
-
-      // === АВТО-ВХОД В КОМНАТУ ПОСЛЕ ЛОГИНА ===
-      React.useEffect(() => {
-        if (!user) return;
-        if (roomId) return; // уже есть target (например, открыли по ссылке)
-        (async () => {
-          try {
-            // 1) пробуем lastRoomId
-            let id = await getUserLastRoom(user.uid);
-            // 2) если нет — ищем любую комнату пользователя
-            if (!id) id = await findAnyRoomForUser(user.uid);
-            if (id) {
-              setRoomId(id);
-              await joinRoom(id, user, user.displayName || "Гость");
-              await setUserLastRoom(user.uid, id);
-            }
-          } catch (e) {
-            console.warn("auto-join failed:", e);
-          }
-        })();
-      }, [user, roomId]); // eslint-disable-line
-
       const { entries, members } = useRoom(roomId);
 
-      // ensure membership name
+      // sync имя участника
       React.useEffect(()=>{
-        if (!user || !roomId) return;
-        const member = members.find(m => m.id === user.uid);
-        if (member && member.name && !displayName) setDisplayName(member.name);
-        if (!member) joinRoom(roomId, user, displayName || user.displayName || "Гость");
-      }, [user, roomId, members]); // eslint-disable-line
+        if(!user || !roomId) return;
+        const me = members.find(m=>m.id===user.uid);
+        if(me?.name && !displayName) setDisplayName(me.name);
+        if(!me) joinRoom(roomId, user, displayName || user.displayName || "Гость");
+      },[user, roomId, members]); // eslint-disable-line
 
       const memberMap = React.useMemo(()=>{
-        const m = new Map();
-        members.forEach(mem => m.set(mem.id, mem));
-        return m;
-      }, [members]);
+        const m = new Map(); members.forEach(x=>m.set(x.id,x)); return m;
+      },[members]);
 
       const entriesForPeriod = React.useMemo(()=>{
-        const sel = new Date(selectedDate + "T12:00:00");
+        const sel = new Date(selectedDate+"T12:00:00");
         return entries.filter(e=>{
           const d = tsToDate(e.ts);
-          if(period==="day")   return sameDay(d,sel);
+          if(period==="day") return sameDay(d,sel);
           if(period==="month") return isSameMonth(d,sel);
-          if(period==="year")  return isSameYear(d,sel);
+          if(period==="year") return isSameYear(d,sel);
           return false;
         });
-      }, [entries, selectedDate, period]);
+      },[entries,selectedDate,period]);
 
       const totals = React.useMemo(()=>{
-        const byId = new Map();
-        for (const e of entriesForPeriod) {
-          const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || { waterFraction: 1 };
-          const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
-          const cur = byId.get(e.userId) || { userId: e.userId, waterMl:0, totalMl:0 };
-          cur.waterMl += waterMl;
-          cur.totalMl += e.ml;
-          byId.set(e.userId, cur);
+        const by = new Map();
+        for(const e of entriesForPeriod){
+          const dr = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {waterFraction:1};
+          const water = Math.round(e.ml * (dr.waterFraction ?? 1));
+          const cur = by.get(e.userId) || { userId:e.userId, waterMl:0, totalMl:0 };
+          cur.waterMl += water; cur.totalMl += e.ml; by.set(e.userId, cur);
         }
-        return Array.from(byId.values())
-          .map(v => ({ ...v, name: memberMap.get(v.userId)?.name || "Участник" }))
+        return Array.from(by.values())
+          .map(v=>({...v, name: memberMap.get(v.userId)?.name || "Участник"}))
           .sort((a,b)=> b.waterMl - a.waterMl);
-      }, [entriesForPeriod, memberMap]);
+      },[entriesForPeriod, memberMap]);
 
       const myHistory = React.useMemo(()=>{
-        if (!user) return [];
-        return entries.filter(e => e.userId === user.uid).slice(0,20);
-      }, [entries, user]);
+        if(!user) return [];
+        return entries.filter(e=>e.userId===user.uid).slice(0,20);
+      },[entries,user]);
 
       async function handleAddDrink(ml){
-        if (!user || !roomId) return;
+        if(!user || !roomId) return;
         const name = displayName || user.displayName || "Гость";
         await joinRoom(roomId, user, name);
         await addDrinkCloud(roomId, user, { ml, drinkId, userName: name });
       }
-      async function handleUndo(){
-        if (!user || !roomId) return;
-        await undoLastForCurrentCloud(roomId, user);
-      }
-
+      async function handleUndo(){ if(user && roomId) await undoLastForCurrentCloud(roomId,user); }
       async function handleCreateRoom(){
-        if (!user) return;
+        if(!user) return;
         const name = prompt("Название комнаты?") || "Наша команда";
         const id = await createRoom(name, user.uid);
         setRoomId(id);
@@ -460,7 +412,7 @@
         await setUserLastRoom(user.uid, id);
       }
       async function handleJoinExisting(id){
-        if (!user || !id) return;
+        if(!user || !id) return;
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
         await setUserLastRoom(user.uid, id);
@@ -468,27 +420,21 @@
       function copyInvite(){
         const url = location.origin + location.pathname + `#room=${roomId}`;
         navigator.clipboard?.writeText(url);
-        alert("Ссылка скопирована:\n" + url);
+        alert("Ссылка скопирована:\n"+url);
       }
       async function goToRoom(id){
-        if (!user || !id) return;
+        if(!user || !id) return;
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
         await setUserLastRoom(user.uid, id);
       }
       async function handleDeleteRoom(id){
         await deleteRoomDeep(id, user);
-        if (id === roomId) {
-          setRoomId("");
-          await setUserLastRoom(user.uid, "");
-        }
+        if(id===roomId){ setRoomId(""); await setUserLastRoom(user.uid,""); }
       }
       async function handleLeaveRoom(id){
         await leaveRoom(id, user);
-        if (id === roomId) {
-          setRoomId("");
-          await setUserLastRoom(user.uid, "");
-        }
+        if(id===roomId){ setRoomId(""); await setUserLastRoom(user.uid,""); }
       }
 
       const Header = () => (
@@ -501,27 +447,17 @@
               Лайв-соревнование по <span className="font-semibold">водному эквиваленту</span>
             </p>
           </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
               <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
               <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
             </div>
-
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"
-            />
-
-            <button
-              onClick={()=>setTheme(theme==="dark"?"light":"dark")}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition"
-              title="Переключить тему"
-            >
-              {theme==="dark" ? "🌙 Dark" : "🌞 Light"}
+            <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}
+                   className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"/>
+            <button onClick={()=>setTheme(theme==="dark"?"light":"dark")}
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition">
+              {theme==="dark"?"🌙 Dark":"🌞 Light"}
             </button>
           </div>
         </div>
@@ -531,14 +467,12 @@
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold">Мои комнаты</h2>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length || 0}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length||0}</span>
           </div>
-          {!myRooms.length && (
-            <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет. Создайте или присоединитесь по ID.</div>
-          )}
+          {!myRooms.length && <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет. Создайте или присоединитесь по ID.</div>}
           <ul className="space-y-2">
-            {myRooms.map(r => {
-              const isOwner = r.ownerId && user && r.ownerId === user.uid;
+            {myRooms.map(r=>{
+              const isOwner = r.ownerId && user && r.ownerId===user.uid;
               return (
                 <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/60 dark:bg-slate-800/50">
                   <div className="min-w-0">
@@ -547,11 +481,9 @@
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={()=>goToRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">Перейти</button>
-                    {isOwner ? (
-                      <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
-                    ) : (
-                      <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>
-                    )}
+                    {isOwner
+                      ? <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
+                      : <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>}
                   </div>
                 </li>
               );
@@ -560,24 +492,23 @@
         </Card>
       );
 
-      if (!user) {
+      if(!user){
         return (
           <div className="min-h-full p-6 flex items-center justify-center">
             <Card className="max-w-md w-full p-6 text-center">
               <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
-              <p className="text-slate-600 dark:text-slate-300 mb-6">
-                Войдите, чтобы участвовать и синхронизировать записи между устройствами.
-              </p>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">Войдите, чтобы синхронизировать записи между устройствами.</p>
               <div className="grid gap-2">
                 <button onClick={signInGoogle} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
                 <button onClick={signInAnon} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
               </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">Добавьте домен в <em>Authentication → Authorized domains</em>.</p>
             </Card>
           </div>
         );
       }
 
-      if (!roomId) {
+      if(!roomId){
         return (
           <div className="min-h-full p-6">
             <div className="max-w-4xl mx-auto grid gap-6">
@@ -590,14 +521,13 @@
                     <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Например, Артём"
                       className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
                   </label>
-                  <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
-                    ➕ Создать комнату
-                  </button>
+                  <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">➕ Создать комнату</button>
+                  <div className="mt-4"><button onClick={signOut} className="text-sm underline">Выйти из аккаунта</button></div>
                 </Card>
 
                 <Card className="p-6">
                   <h2 className="font-semibold mb-3">Присоединиться по ID</h2>
-                  <JoinForm onJoin={handleJoinExisting} onSetName={setDisplayName} displayName={displayName} />
+                  <JoinForm onJoin={handleJoinExisting} onSetName={setDisplayName} displayName={displayName}/>
                 </Card>
               </div>
 
@@ -616,7 +546,7 @@
               <Card className="px-3 py-2">
                 <div className="text-sm">
                   Комната: <code className="font-mono">{roomId}</code>
-                  <button onClick={copyInvite} className="ml-2 text-sm underline decoration-dashed underline-offset-4">Скопировать ссылку-приглашение</button>
+                  <button onClick={copyInvite} className="ml-2 text-sm underline decoration-dashed underline-offset-4">Скопировать ссылку</button>
                 </div>
               </Card>
               <Card className="px-3 py-2">
@@ -630,14 +560,14 @@
                   }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
                 </div>
               </Card>
-              <button onClick={()=>auth.signOut()} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
+              <button onClick={signOut} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Участники</h2>
                 <ul className="space-y-1 text-sm">
-                  {members.map(m => (
+                  {members.map(m=>(
                     <li key={m.id} className="flex items-center justify-between">
                       <span>{m.name || "Участник"}</span>
                       <span className="text-xs text-slate-500 dark:text-slate-400">{m.id===user.uid ? "это вы" : ""}</span>
@@ -650,7 +580,6 @@
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold">Добавить напиток {displayName ? `для ${displayName}` : ""}</h2>
-                  <button className="text-sm underline decoration-dashed underline-offset-4" onClick={()=>setShowDrinkSettings(true)}>⚙️ Настройки напитков</button>
                 </div>
 
                 <div className="mb-3">
@@ -661,7 +590,8 @@
                           "border-slate-200 dark:border-slate-700",
                           drinkId===d.id ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300" : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
                         )}
-                        title={`Доля воды: ${fmtPct(d.waterFraction)}`}>
+                        title={`Доля воды ~ ${Math.round((d.waterFraction??1)*100)}%`}
+                      >
                         <span className="mr-1">{d.emoji}</span>{d.name}
                       </button>
                     ))}
@@ -669,15 +599,15 @@
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => handleAddDrink(ML.glass)}>
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.glass)}>
                     🥛 Стакан
                     <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.glass)}</div>
                   </button>
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => handleAddDrink(ML.bottle05)}>
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.bottle05)}>
                     🧴 Бутылка 0.5
                     <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle05)}</div>
                   </button>
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={() => handleAddDrink(ML.bottle15)}>
+                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.bottle15)}>
                     🧴 Бутылка 1.5
                     <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle15)}</div>
                   </button>
@@ -690,7 +620,7 @@
                 <div className="mt-4">
                   <h3 className="text-sm font-semibold mb-1">Ваши последние записи</h3>
                   <ul className="text-sm max-h-40 overflow-auto space-y-1">
-                    {myHistory.map((e) => {
+                    {myHistory.map(e=>{
                       const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
                       const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
                       const dt = tsToDate(e.ts);
@@ -706,15 +636,40 @@
                 </div>
               </Card>
 
-              <MyRoomsCard />
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold">Мои комнаты</h2>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length||0}</span>
+                </div>
+                {!myRooms.length && <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет.</div>}
+                <ul className="space-y-2">
+                  {myRooms.map(r=>{
+                    const isOwner = r.ownerId && user && r.ownerId===user.uid;
+                    return (
+                      <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/60 dark:bg-slate-800/50">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{r.name || "Без названия"}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">ID: <code className="font-mono">{r.id}</code></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={()=>goToRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">Перейти</button>
+                          {isOwner
+                            ? <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
+                            : <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
             </div>
 
             <Card className="p-4">
               <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
               <ul className="space-y-1 text-sm max-h-80 overflow-auto">
                 {entriesForPeriod
-                  .sort((a, b) => tsToDate(b.ts) - tsToDate(a.ts))
-                  .map((e) => {
+                  .sort((a,b)=> tsToDate(b.ts) - tsToDate(a.ts))
+                  .map(e=>{
                     const mem = memberMap.get(e.userId);
                     const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
                     const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
@@ -739,7 +694,7 @@
     }
 
     function JoinForm({ onJoin, onSetName, displayName }){
-      const [id, setId] = React.useState("");
+      const [id,setId] = React.useState("");
       return (
         <div>
           <label className="text-sm block mb-3">
@@ -752,9 +707,7 @@
             <input value={id} onChange={e=>setId(e.target.value)} placeholder="Вставьте ROOM_ID"
               className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
           </label>
-          <button onClick={()=>onJoin(id)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
-            ⬇️ Войти в комнату
-          </button>
+          <button onClick={()=>onJoin(id)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">⬇️ Войти в комнату</button>
         </div>
       );
     }
