@@ -66,22 +66,29 @@
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
 
-    // ====== AUTH: persistence + redirect handling ======
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>{
-      console.warn("setPersistence failed:", e);
-      alert("setPersistence: " + (e?.code||"") + " " + (e?.message||""));
+    // === Auth / Firestore ===
+    const auth = firebase.auth();
+    const db   = firebase.firestore();
+
+    // — фиксируем сессию в браузере
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
+      console.warn("[AUTH] setPersistence error:", e);
+      alert("setPersistence error: " + (e?.code || "") + " — " + (e?.message || ""));
     });
 
+    // — если вернулись с Google после redirect
     auth.getRedirectResult()
-      .then(res => {
-        if (res?.user) console.log("[AUTH] redirect OK:", res.user.uid);
+      .then((res) => {
+        if (res?.user) {
+          console.log("[AUTH] Redirect ✓ user:", res.user.uid);
+        } else {
+          console.log("[AUTH] Redirect: no user (first load or already signed-in)");
+        }
       })
-      .catch(err => {
-        console.warn("[AUTH] redirect error:", err);
-        alert("Redirect error: " + (err?.code||"") + " — " + (err?.message||""));
+      .catch((err) => {
+        console.warn("[AUTH] Redirect error:", err);
+        alert("Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
       });
 
     // ====== Utils / constants ======
@@ -124,24 +131,40 @@
       return { theme, setTheme };
     }
 
+    // --- УПРОЩЁННЫЙ useAuth: только redirect ---
     function useAuth() {
       const [user, setUser] = React.useState(null);
-      React.useEffect(() => auth.onAuthStateChanged(setUser), []);
 
-      async function signInGoogle() {
+      React.useEffect(() => {
+        const unsub = auth.onAuthStateChanged((u) => {
+          console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
+          setUser(u);
+        });
+        return unsub;
+      }, []);
+
+      const signInGoogle = React.useCallback(() => {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
-        try {
-          // Важно: вызывать напрямую из клика
-          await auth.signInWithRedirect(provider);
-        } catch (err) {
-          console.warn("signInWithRedirect error:", err);
-          alert("Google Sign-in: " + (err?.code||"") + " — " + (err?.message||""));
+        // вызывать напрямую из клика
+        const p = auth.signInWithRedirect(provider);
+        if (p && typeof p.catch === "function") {
+          p.catch((err) => {
+            console.warn("[AUTH] signInWithRedirect error:", err);
+            alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+          });
         }
-      }
+      }, []);
 
-      const signInAnon = () => auth.signInAnonymously();
-      const signOut = () => auth.signOut();
+      const signInAnon = React.useCallback(() => {
+        return auth.signInAnonymously().catch((err)=>{
+          console.warn("[AUTH] signInAnonymously error:", err);
+          alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+        });
+      }, []);
+
+      const signOut = React.useCallback(() => auth.signOut(), []);
+
       return { user, signInGoogle, signInAnon, signOut };
     }
 
@@ -290,6 +313,22 @@
       if(!confirm("Покинуть эту комнату?")) return;
       await db.collection("rooms").doc(roomId).collection("members").doc(currentUser.uid).delete();
     }
+
+    // ====== UI atoms ======
+    const Card = ({children, className})=>(
+      <div className={cx(
+        "rounded-2xl border shadow-card",
+        "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
+        "dark:bg-slate-800/60 dark:border-slate-700",
+        className
+      )}>{children}</div>
+    );
+    const SegBtn = ({active, children, onClick})=>(
+      <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
+        active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+               : "bg-white/70 dark:bg-slate-800/60"
+      )}>{children}</button>
+    );
 
     // ====== App ======
     function App(){
@@ -474,21 +513,6 @@
         </div>
       );
 
-      const Card = ({children, className})=>(
-        <div className={cx(
-          "rounded-2xl border shadow-card",
-          "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
-          "dark:bg-slate-800/60 dark:border-slate-700",
-          className
-        )}>{children}</div>
-      );
-      const SegBtn = ({active, children, onClick})=>(
-        <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
-          active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                 : "bg-white/70 dark:bg-slate-800/60"
-        )}>{children}</button>
-      );
-
       const MyRoomsCard = () => (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
@@ -535,7 +559,7 @@
                 <button onClick={signInAnon} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
-                Домен GitHub Pages должен быть добавлен в <em>Authentication → Authorized domains</em>.
+                Ваш домен должен быть в <em>Authentication → Authorized domains</em>.
               </p>
             </Card>
           </div>
