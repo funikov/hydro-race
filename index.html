@@ -80,6 +80,7 @@
     const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
     const isSameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
     const isSameYear = (a,b) => a.getFullYear()===b.getFullYear();
+    const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
 
     const DEFAULT_DRINKS = [
       { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
@@ -93,7 +94,6 @@
     ];
 
     function cx(...classes){ return classes.filter(Boolean).join(" "); }
-    const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
 
     // ====== Hooks ======
     function useTheme(){
@@ -160,9 +160,10 @@
     }
 
     // ====== Firestore ops ======
-    async function createRoom(name) {
+    async function createRoom(name, ownerId) {
       const ref = await db.collection("rooms").add({
         name: name || "Новая комната",
+        ownerId: ownerId || null,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       return ref.id;
@@ -171,6 +172,7 @@
     async function joinRoom(roomId, user, name) {
       if (!roomId || !user) return;
       await db.collection("rooms").doc(roomId).collection("members").doc(user.uid).set({
+        userId: user.uid,                              // чтобы удобно искать collectionGroup'ом
         name: name || user.displayName || "Гость",
         joinedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -196,9 +198,9 @@
 
     // ====== User profile (последняя комната) ======
     async function setUserLastRoom(uid, roomId) {
-      if (!uid || !roomId) return;
+      if (!uid) return;
       await db.collection("users").doc(uid).set({
-        lastRoomId: roomId,
+        lastRoomId: roomId || "",
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
     }
@@ -206,6 +208,66 @@
       if (!uid) return "";
       const snap = await db.collection("users").doc(uid).get();
       return snap.exists ? (snap.data().lastRoomId || "") : "";
+    }
+
+    // ====== Мои комнаты (по членству) ======
+    function useMyRooms(user){
+      const [myRooms, setMyRooms] = React.useState([]);
+      React.useEffect(()=>{
+        if(!user){ setMyRooms([]); return; }
+        // Ищем все документы members с doc.id == user.uid во всех комнатах
+        const unsub = db.collectionGroup("members")
+          .where(firebase.firestore.FieldPath.documentId(), "==", user.uid)
+          .onSnapshot(async snap=>{
+            const arr = await Promise.all(snap.docs.map(async d=>{
+              const roomRef = d.ref.parent.parent; // rooms/{roomId}
+              if (!roomRef) return null;
+              const roomSnap = await roomRef.get();
+              return roomSnap.exists ? { id: roomRef.id, ...roomSnap.data() } : null;
+            }));
+            // Уникализируем и сортируем по дате создания (новые сверху)
+            const seen = new Set();
+            const unique = [];
+            for(const r of arr){
+              if(r && !seen.has(r.id)){ seen.add(r.id); unique.push(r); }
+            }
+            unique.sort((a,b)=> (b?.createdAt?.toMillis?.()||0) - (a?.createdAt?.toMillis?.()||0));
+            setMyRooms(unique);
+          });
+        return () => unsub && unsub();
+      }, [user]);
+      return myRooms;
+    }
+
+    // ====== Глубокое удаление комнаты ======
+    async function deleteCollectionDeep(colRef, batchSize=200){
+      let snap = await colRef.limit(batchSize).get();
+      while(!snap.empty){
+        const batch = db.batch();
+        snap.docs.forEach(doc=>batch.delete(doc.ref));
+        await batch.commit();
+        snap = await colRef.limit(batchSize).get();
+      }
+    }
+    async function deleteRoomDeep(roomId, currentUser){
+      if(!roomId) return;
+      const roomRef = db.collection("rooms").doc(roomId);
+      const roomSnap = await roomRef.get();
+      if(!roomSnap.exists) return;
+      const data = roomSnap.data() || {};
+      if (data.ownerId && currentUser && data.ownerId !== currentUser.uid) {
+        alert("Удалять комнату может только владелец.");
+        return;
+      }
+      if(!confirm("Точно удалить комнату и все записи? Действие необратимо.")) return;
+      await deleteCollectionDeep(roomRef.collection("entries"));
+      await deleteCollectionDeep(roomRef.collection("members"));
+      await roomRef.delete();
+    }
+    async function leaveRoom(roomId, currentUser){
+      if(!roomId || !currentUser) return;
+      if(!confirm("Покинуть эту комнату?")) return;
+      await db.collection("rooms").doc(roomId).collection("members").doc(currentUser.uid).delete();
     }
 
     // ====== UI components ======
@@ -238,6 +300,9 @@
       const [roomId, setRoomId] = React.useState(getHashRoomId());
       const [displayName, setDisplayName] = React.useState("");
 
+      // мои комнаты
+      const myRooms = useMyRooms(user);
+
       // sync hash <-> state
       React.useEffect(()=>{
         const onHash = () => setRoomId(getHashRoomId());
@@ -261,12 +326,10 @@
           try {
             const last = await getUserLastRoom(user.uid);
             if (last) {
-              setRoomId(last); // этот сет обновит hash другим эффектом
+              setRoomId(last);
               await joinRoom(last, user, displayName || user.displayName || "Гость");
             }
-          } catch (e) {
-            console.warn("load lastRoomId failed:", e);
-          }
+          } catch (e) { console.warn("load lastRoomId failed:", e); }
         })();
       }, [user, roomId]); // eslint-disable-line
 
@@ -338,21 +401,41 @@
       async function handleCreateRoom(){
         if (!user) return;
         const name = prompt("Название комнаты?") || "Наша команда";
-        const id = await createRoom(name);
+        const id = await createRoom(name, user.uid);
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
-        await setUserLastRoom(user.uid, id);  // NEW: запомним последнюю комнату
+        await setUserLastRoom(user.uid, id);
       }
       async function handleJoinExisting(id){
         if (!user || !id) return;
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
-        await setUserLastRoom(user.uid, id);  // NEW: запомним последнюю комнату
+        await setUserLastRoom(user.uid, id);
       }
       function copyInvite(){
         const url = location.origin + location.pathname + `#room=${roomId}`;
         navigator.clipboard?.writeText(url);
         alert("Ссылка скопирована:\n" + url);
+      }
+      async function goToRoom(id){
+        if (!user || !id) return;
+        setRoomId(id);
+        await joinRoom(id, user, displayName || user.displayName || "Гость");
+        await setUserLastRoom(user.uid, id);
+      }
+      async function handleDeleteRoom(id){
+        await deleteRoomDeep(id, user);
+        if (id === roomId) {
+          setRoomId("");
+          await setUserLastRoom(user.uid, "");
+        }
+      }
+      async function handleLeaveRoom(id){
+        await leaveRoom(id, user);
+        if (id === roomId) {
+          setRoomId("");
+          await setUserLastRoom(user.uid, "");
+        }
       }
 
       // UI blocks
@@ -394,6 +477,39 @@
         </div>
       );
 
+      const MyRoomsCard = () => (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold">Мои комнаты</h2>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length || 0}</span>
+          </div>
+          {!myRooms.length && (
+            <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет. Создайте или присоединитесь по ID.</div>
+          )}
+          <ul className="space-y-2">
+            {myRooms.map(r => {
+              const isOwner = r.ownerId && user && r.ownerId === user.uid;
+              return (
+                <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/60 dark:bg-slate-800/50">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{r.name || "Без названия"}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">ID: <code className="font-mono">{r.id}</code></div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>goToRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">Перейти</button>
+                    {isOwner ? (
+                      <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
+                    ) : (
+                      <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      );
+
       if (!user) {
         return (
           <div className="min-h-full p-6 flex items-center justify-center">
@@ -417,34 +533,31 @@
       if (!roomId) {
         return (
           <div className="min-h-full p-6">
-            <div className="max-w-3xl mx-auto grid gap-6">
+            <div className="max-w-4xl mx-auto grid gap-6">
               <Header />
-              <Card className="p-6">
-                <h2 className="font-semibold mb-3">Выберите комнату</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="border rounded-xl p-4">
-                    <div className="font-medium mb-2">Создать новую</div>
-                    <label className="text-sm block mb-3">
-                      Ваше имя:
-                      <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Например, Артём"
-                        className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
-                    </label>
-                    <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
-                      ➕ Создать комнату
-                    </button>
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="p-6">
+                  <h2 className="font-semibold mb-3">Создать комнату</h2>
+                  <label className="text-sm block mb-3">
+                    Ваше имя:
+                    <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Например, Артём"
+                      className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
+                  </label>
+                  <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
+                    ➕ Создать комнату
+                  </button>
+                  <div className="mt-4">
+                    <button onClick={signOut} className="text-sm underline">Выйти из аккаунта</button>
                   </div>
-                  <div className="border rounded-xl p-4">
-                    <div className="font-medium mb-2">Войти по ID</div>
-                    <JoinForm onJoin={handleJoinExisting} onSetName={setDisplayName} displayName={displayName} />
-                  </div>
-                </div>
-                <div className="mt-4 text-xs text-slate-600 dark:text-slate-400">
-                  После создания/входа получите ссылку вида <code>#room=ROOM_ID</code> и поделитесь ею.
-                </div>
-                <div className="mt-4">
-                  <button onClick={signOut} className="text-sm underline">Выйти из аккаунта</button>
-                </div>
-              </Card>
+                </Card>
+
+                <Card className="p-6">
+                  <h2 className="font-semibold mb-3">Присоединиться по ID</h2>
+                  <JoinForm onJoin={handleJoinExisting} onSetName={setDisplayName} displayName={displayName} />
+                </Card>
+              </div>
+
+              <MyRoomsCard />
             </div>
           </div>
         );
@@ -469,15 +582,14 @@
                     const n = prompt("Ваше имя:", displayName || user.displayName || "Гость") || "";
                     setDisplayName(n);
                     await joinRoom(roomId, user, n);
-                    await setUserLastRoom(user.uid, roomId); // если поменяли имя — всё равно актуализируем lastRoom
+                    await setUserLastRoom(user.uid, roomId);
                   }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
                 </div>
               </Card>
               <button onClick={signOut} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
             </div>
 
-            <section className="grid lg:grid-cols-3 gap-6">
-              {/* Members */}
+            <div className="grid lg:grid-cols-3 gap-6">
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Участники</h2>
                 <ul className="space-y-1 text-sm">
@@ -491,7 +603,6 @@
                 </ul>
               </Card>
 
-              {/* Add drink */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold">Добавить напиток {displayName ? `для ${displayName}` : ""}</h2>
@@ -512,7 +623,7 @@
                     ))}
                   </div>
                   <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
-                    Выбрано: <strong>{drinkSelected?.emoji} {drinkSelected?.name}</strong> — доля воды {fmtPct(drinkSelected?.waterFraction ?? 1)}
+                    Выбрано: <strong>{(drinkById.get(drinkId)||{}).emoji} {(drinkById.get(drinkId)||{}).name}</strong> — доля воды {fmtPct((drinkById.get(drinkId)||{waterFraction:1}).waterFraction)}
                   </div>
                 </div>
 
@@ -554,29 +665,9 @@
                 </div>
               </Card>
 
-              {/* Leaderboard */}
-              <Card className="p-4">
-                <h2 className="font-semibold mb-3">Таблица лидеров — {period === "day" ? "за день" : period === "month" ? "за месяц" : "за год"}</h2>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">Рейтинг по <strong>водному эквиваленту</strong></p>
-                <ol className="space-y-2">
-                  {totals.map((t, i) => (
-                    <li key={t.userId} className="flex items-center justify-between rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-800/50">
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 text-center font-bold">{i + 1}</span>
-                        <span className="font-medium">{t.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold">{fmtLiters(t.waterMl)} воды</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">всего выпито: {fmtLiters(t.totalMl)}</div>
-                      </div>
-                    </li>
-                  ))}
-                  {!totals.length && <li className="text-slate-500 dark:text-slate-400">Нет данных</li>}
-                </ol>
-              </Card>
-            </section>
+              <MyRoomsCard />
+            </div>
 
-            {/* Feed */}
             <Card className="p-4">
               <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
               <ul className="space-y-1 text-sm max-h-80 overflow-auto">
