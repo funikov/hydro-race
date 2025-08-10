@@ -56,7 +56,7 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init with YOUR config ======
+    // ====== Firebase init (твой конфиг) ======
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -69,10 +69,24 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // ====== Utils / constants ======
-    const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1"; // локально: доли воды и т.п.
-    const THEME_KEY = "hydro_theme";
+    // ====== AUTH: persistence + redirect handling ======
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>{
+      console.warn("setPersistence failed:", e);
+      alert("setPersistence: " + (e?.code||"") + " " + (e?.message||""));
+    });
 
+    auth.getRedirectResult()
+      .then(res => {
+        if (res?.user) console.log("[AUTH] redirect OK:", res.user.uid);
+      })
+      .catch(err => {
+        console.warn("[AUTH] redirect error:", err);
+        alert("Redirect error: " + (err?.code||"") + " — " + (err?.message||""));
+      });
+
+    // ====== Utils / constants ======
+    const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1";
+    const THEME_KEY = "hydro_theme";
     const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
     const fmtLiters = (ml) => (ml / 1000).toFixed(2).replace(/\.00$/, "") + " л";
     const fmtPct = (x) => Math.round(x * 100) + "%";
@@ -81,6 +95,7 @@
     const isSameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
     const isSameYear = (a,b) => a.getFullYear()===b.getFullYear();
     const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
+    function cx(...classes){ return classes.filter(Boolean).join(" "); }
 
     const DEFAULT_DRINKS = [
       { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
@@ -92,8 +107,6 @@
       { id:"juice",       name:"Сок",             emoji:"🧃", waterFraction:0.88 },
       { id:"lemonade",    name:"Лимонад",         emoji:"🍋", waterFraction:0.90 },
     ];
-
-    function cx(...classes){ return classes.filter(Boolean).join(" "); }
 
     // ====== Hooks ======
     function useTheme(){
@@ -114,9 +127,21 @@
     function useAuth() {
       const [user, setUser] = React.useState(null);
       React.useEffect(() => auth.onAuthStateChanged(setUser), []);
-      const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      const signInAnon   = () => auth.signInAnonymously();
-      const signOut      = () => auth.signOut();
+
+      async function signInGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        try {
+          // Важно: вызывать напрямую из клика
+          await auth.signInWithRedirect(provider);
+        } catch (err) {
+          console.warn("signInWithRedirect error:", err);
+          alert("Google Sign-in: " + (err?.code||"") + " — " + (err?.message||""));
+        }
+      }
+
+      const signInAnon = () => auth.signInAnonymously();
+      const signOut = () => auth.signOut();
       return { user, signInGoogle, signInAnon, signOut };
     }
 
@@ -172,7 +197,7 @@
     async function joinRoom(roomId, user, name) {
       if (!roomId || !user) return;
       await db.collection("rooms").doc(roomId).collection("members").doc(user.uid).set({
-        userId: user.uid,                              // чтобы удобно искать collectionGroup'ом
+        userId: user.uid,
         name: name || user.displayName || "Гость",
         joinedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
@@ -215,22 +240,18 @@
       const [myRooms, setMyRooms] = React.useState([]);
       React.useEffect(()=>{
         if(!user){ setMyRooms([]); return; }
-        // Ищем все документы members с doc.id == user.uid во всех комнатах
         const unsub = db.collectionGroup("members")
           .where(firebase.firestore.FieldPath.documentId(), "==", user.uid)
           .onSnapshot(async snap=>{
             const arr = await Promise.all(snap.docs.map(async d=>{
-              const roomRef = d.ref.parent.parent; // rooms/{roomId}
+              const roomRef = d.ref.parent.parent;
               if (!roomRef) return null;
               const roomSnap = await roomRef.get();
               return roomSnap.exists ? { id: roomRef.id, ...roomSnap.data() } : null;
             }));
-            // Уникализируем и сортируем по дате создания (новые сверху)
             const seen = new Set();
             const unique = [];
-            for(const r of arr){
-              if(r && !seen.has(r.id)){ seen.add(r.id); unique.push(r); }
-            }
+            for(const r of arr){ if(r && !seen.has(r.id)){ seen.add(r.id); unique.push(r); } }
             unique.sort((a,b)=> (b?.createdAt?.toMillis?.()||0) - (a?.createdAt?.toMillis?.()||0));
             setMyRooms(unique);
           });
@@ -239,7 +260,7 @@
       return myRooms;
     }
 
-    // ====== Глубокое удаление комнаты ======
+    // ====== Глубокое удаление / выход ======
     async function deleteCollectionDeep(colRef, batchSize=200){
       let snap = await colRef.limit(batchSize).get();
       while(!snap.empty){
@@ -270,23 +291,6 @@
       await db.collection("rooms").doc(roomId).collection("members").doc(currentUser.uid).delete();
     }
 
-    // ====== UI components ======
-    const Card = ({children, className})=>(
-      <div className={cx(
-        "rounded-2xl border shadow-card",
-        "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
-        "dark:bg-slate-800/60 dark:border-slate-700",
-        className
-      )}>{children}</div>
-    );
-
-    const SegBtn = ({active, children, onClick})=>(
-      <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
-        active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-               : "bg-white/70 dark:bg-slate-800/60"
-      )}>{children}</button>
-    );
-
     // ====== App ======
     function App(){
       const { theme, setTheme } = useTheme();
@@ -300,7 +304,6 @@
       const [roomId, setRoomId] = React.useState(getHashRoomId());
       const [displayName, setDisplayName] = React.useState("");
 
-      // мои комнаты
       const myRooms = useMyRooms(user);
 
       // sync hash <-> state
@@ -318,7 +321,7 @@
         }
       }, [roomId]);
 
-      // если вошли и хеша комнаты нет — загрузим последнюю комнату пользователя
+      // если вошли и хеша нет — загрузим последнюю комнату пользователя
       React.useEffect(() => {
         if (!user) return;
         if (roomId) return;
@@ -335,7 +338,7 @@
 
       const { entries, members } = useRoom(roomId);
 
-      // ensure membership name (once user & room ready)
+      // ensure membership name
       React.useEffect(()=>{
         if (!user || !roomId) return;
         const member = members.find(m => m.id === user.uid);
@@ -345,14 +348,12 @@
 
       const drinkSelected = drinkById.get(drinkId) || drinks[0];
 
-      // derived: members map
       const memberMap = React.useMemo(()=>{
         const m = new Map();
         members.forEach(mem => m.set(mem.id, mem));
         return m;
       }, [members]);
 
-      // filter entries by period
       const entriesForPeriod = React.useMemo(()=>{
         const sel = new Date(selectedDate + "T12:00:00");
         return entries.filter(e=>{
@@ -364,7 +365,6 @@
         });
       }, [entries, selectedDate, period]);
 
-      // leaderboard
       const totals = React.useMemo(()=>{
         const byId = new Map();
         for (const e of entriesForPeriod) {
@@ -380,7 +380,6 @@
           .sort((a,b)=> b.waterMl - a.waterMl);
       }, [entriesForPeriod, drinkById, memberMap]);
 
-      // history for current user
       const myHistory = React.useMemo(()=>{
         if (!user) return [];
         return entries.filter(e => e.userId === user.uid).slice(0,20);
@@ -390,7 +389,7 @@
       async function handleAddDrink(ml){
         if (!user || !roomId) return;
         const name = displayName || user.displayName || "Гость";
-        await joinRoom(roomId, user, name); // ensure name up-to-date
+        await joinRoom(roomId, user, name);
         await addDrinkCloud(roomId, user, { ml, drinkId, userName: name });
       }
       async function handleUndo(){
@@ -451,13 +450,11 @@
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Card className="p-1 border-none shadow-none">
-              <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
-                <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
-                <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
-              </div>
-            </Card>
+            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
+              <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
+              <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
+            </div>
 
             <input
               type="date"
@@ -475,6 +472,21 @@
             </button>
           </div>
         </div>
+      );
+
+      const Card = ({children, className})=>(
+        <div className={cx(
+          "rounded-2xl border shadow-card",
+          "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
+          "dark:bg-slate-800/60 dark:border-slate-700",
+          className
+        )}>{children}</div>
+      );
+      const SegBtn = ({active, children, onClick})=>(
+        <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
+          active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                 : "bg-white/70 dark:bg-slate-800/60"
+        )}>{children}</button>
       );
 
       const MyRoomsCard = () => (
@@ -693,42 +705,6 @@
               Сделано на React + Tailwind. Данные пользователей и записи — в Firebase Firestore.
             </p>
           </div>
-
-          {/* Drink Settings Modal */}
-          {showDrinkSettings && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="max-w-2xl w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 shadow-card">
-                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-                  <h3 className="font-semibold text-lg">Настройки напитков</h3>
-                  <button className="text-sm underline" onClick={()=>setShowDrinkSettings(false)}>Закрыть</button>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">
-                    Измени долю воды (0–100%). Рейтинг считает: водный эквивалент = объём × доля воды.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {drinks.map(d=>(
-                      <div key={d.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-white/70 dark:bg-slate-800/60">
-                        <div className="font-medium">{d.emoji} {d.name}</div>
-                        <label className="text-sm mt-2 block">
-                          Доля воды:
-                          <input
-                            type="number" min="0" max="100" step="1"
-                            value={Math.round((d.waterFraction ?? 1)*100)}
-                            onChange={(e)=>updateDrinkFraction(d.id, (Number(e.target.value)||0)/100)}
-                            className="ml-2 w-20 px-2 py-1 border rounded-lg bg-transparent border-slate-200 dark:border-slate-700"
-                          />%
-                        </label>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          Сейчас считается как {fmtPct(d.waterFraction ?? 1)} от объёма.
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
     }
