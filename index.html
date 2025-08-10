@@ -1,62 +1,115 @@
-<!DOCTYPE html>
-<html lang="ru" class="h-full">
+<!doctype html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HydroRace 💧</title>
-
-  <!-- Tailwind (dark mode по классу) -->
-  <script>
-    window.tailwind = {};
-    window.tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
-          boxShadow: { card: "0 10px 30px -10px rgba(2,6,23,0.25)" },
-          colors: {
-            brand: {50:"#ecfeff",100:"#cffafe",200:"#a5f3fc",300:"#67e8f9",400:"#22d3ee",500:"#06b6d4",600:"#0891b2",700:"#0e7490",800:"#155e75",900:"#164e63"}
-          }
-        }
-      }
-    };
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- React + Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Firebase compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- предотвращаем мигание темы -->
-  <script>
-    (function() {
-      const key = "hydro_theme";
-      const saved = localStorage.getItem(key);
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const wantDark = saved ? saved === "dark" : prefersDark;
-      if (wantDark) document.documentElement.classList.add("dark");
-      document.documentElement.style.colorScheme = wantDark ? "dark" : "light";
-    })();
-  </script>
-  <style>html, body { height: 100%; }</style>
+  <title>HydroRace — кто больше выпил воды</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111827; --muted:#94a3b8; --text:#e5e7eb; --primary:#0ea5e9; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Inter,"Noto Sans",Arial,sans-serif;background:linear-gradient(180deg,#07101d,#0b1220 30%);color:var(--text)}
+    header{position:sticky;top:0;z-index:10;background:rgba(11,18,32,.75);backdrop-filter:blur(8px);border-bottom:1px solid #1f2937}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    .app-title{font-weight:800;letter-spacing:.2px}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:var(--radius);padding:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:860px){.grid{grid-template-columns:1.1fr .9fr}}
+    button{appearance:none;border:1px solid #1f2937;border-radius:14px;background:#0f172a;color:var(--text);padding:10px 14px;font-weight:600;cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#0ea5e9,#0177b7);border-color:#0ea5e955}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.6;cursor:default}
+    .amounts{display:flex;gap:10px;flex-wrap:wrap}
+    .amounts button{min-width:120px}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:999px;background:#0f172a;border:1px solid #1f2937}
+    input,select{width:100%;background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px;color:var(--text)}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:999px;border:1px solid #1f2937;background:#0f172a;cursor:pointer}
+    .tab.active{background:linear-gradient(180deg,#0ea5e9,#0177b7)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #1f2937;text-align:left}
+    th{color:#9fb2c7;font-weight:700}
+    .me{background:#0a1b2a}
+    .footer{opacity:.7;font-size:12px;margin-top:24px}
+    .avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid #1f2937}
+    .right{margin-left:auto}
+    .hint{color:var(--muted);font-size:12px}
+  </style>
 </head>
+<body>
+  <header>
+    <div class="wrap row">
+      <div class="row grow">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2c1.5 2 3 3.5 3 6a3 3 0 1 1-6 0c0-2.5 1.5-4 3-6Zm0 0v20" stroke="#0ea5e9" stroke-width="2"/></svg>
+        <div>
+          <div class="app-title">HydroRace</div>
+          <div class="hint">Соревнование по воде: день · месяц · год</div>
+        </div>
+      </div>
+      <div id="authArea" class="row"></div>
+    </div>
+  </header>
 
-<body class="h-full font-sans antialiased bg-gradient-to-br from-brand-50 via-white to-brand-100 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-100">
-  <div id="root" class="h-full"></div>
+  <main class="wrap">
+    <div class="grid">
+      <section class="card">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:16px;">
+          <div class="grow">
+            <h2 style="margin:0 0 6px">Сегодня</h2>
+            <div class="hint">Твоя цель — пить воду и обновлять прогресс. Выбери объём или введи свой.</div>
+          </div>
+          <div>
+            <label class="hint">Группа</label>
+            <div class="row">
+              <input id="groupInput" placeholder="например: friends2025" style="min-width:220px"/>
+              <button id="saveGroupBtn">ОК</button>
+            </div>
+            <div class="hint" id="groupHint"></div>
+          </div>
+        </div>
 
-  <script type="text/babel">
-    // ========= Firebase init: вставь актуальный конфиг из консоли Firebase =========
+        <div class="amounts" style="margin-top:12px">
+          <button class="primary" data-ml="250">Стакан 250 мл</button>
+          <button class="primary" data-ml="500">Бутылка 0.5 л</button>
+          <button class="primary" data-ml="1500">Бутылка 1.5 л</button>
+          <div class="pill">
+            <input id="customMl" type="number" min="1" placeholder="Свои мл" style="width:120px">
+            <button id="addCustomBtn">Добавить</button>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <div class="pill">Сегодня выпито: <strong id="todayTotal" style="margin-left:8px">0 мл</strong></div>
+          <div class="pill">Группа: <strong id="groupLabel" style="margin-left:8px">global</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h2 style="margin:0">Топ участников</h2>
+          <div class="tabs" id="periodTabs">
+            <button data-period="day" class="tab active">День</button>
+            <button data-period="month" class="tab">Месяц</button>
+            <button data-period="year" class="tab">Год</button>
+          </div>
+        </div>
+        <div style="margin-top:8px" class="hint">Считаем по локальному времени устройства.</div>
+        <div id="leaderboardArea" style="margin-top:10px"></div>
+      </section>
+    </div>
+
+    <div class="footer">Подсказка: создайте свой код группы (например, team-omega) и поделитесь им с друзьями. Все, кто выберет тот же код, увидят общий рейтинг.</div>
+  </main>
+
+  <script type="module">
+    // =====================
+    // 1) Firebase CONFIG
+    // =====================
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -65,632 +118,265 @@
       messagingSenderId: "644586947662",
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db   = firebase.firestore();
 
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
-      console.warn("[AUTH] setPersistence error:", e);
+    // =====================
+    // 2) SDK imports
+    // =====================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, orderBy, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // A small helper for time boundaries in local timezone
+    // We avoid extra libs to keep single-file footprint small
+    function startEndOf(period){
+      const now = new Date();
+      let start, end;
+      if(period==='day'){
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1);
+      } else if(period==='month'){
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+      } else { // 'year'
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear()+1, 0, 1);
+      }
+      return { start: Timestamp.fromMillis(start.getTime()), end: Timestamp.fromMillis(end.getTime()) };
+    }
+
+    // =====================
+    // 3) App state
+    // =====================
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const state = {
+      user:null,
+      groupId: localStorage.getItem('hydrace_group') || 'global',
+      period: 'day'
+    };
+
+    // =====================
+    // 4) DOM refs
+    // =====================
+    const authArea = document.getElementById('authArea');
+    const todayTotalEl = document.getElementById('todayTotal');
+    const groupLabelEl = document.getElementById('groupLabel');
+    const groupInput = document.getElementById('groupInput');
+    const saveGroupBtn = document.getElementById('saveGroupBtn');
+    const groupHint = document.getElementById('groupHint');
+    const leaderboardArea = document.getElementById('leaderboardArea');
+
+    // =====================
+    // 5) Auth UI
+    // =====================
+    function renderAuth(){
+      authArea.innerHTML = '';
+      if(!state.user){
+        const btn = document.createElement('button');
+        btn.className='primary';
+        btn.textContent='Войти через Google';
+        btn.onclick = async ()=>{
+          try{
+            const prov = new GoogleAuthProvider();
+            await signInWithPopup(auth, prov);
+          }catch(e){
+            alert('Не удалось войти: '+ e.message);
+          }
+        };
+        authArea.appendChild(btn);
+      }else{
+        const row = document.createElement('div');
+        row.className='row';
+        const img = document.createElement('img');
+        img.className='avatar';
+        img.src = state.user.photoURL || '';
+        const name = document.createElement('div');
+        name.textContent = state.user.displayName || 'Без имени';
+        const out = document.createElement('button');
+        out.className='ghost';
+        out.textContent='Выйти';
+        out.onclick = ()=> signOut(auth);
+        row.append(img,name,out);
+        authArea.appendChild(row);
+      }
+    }
+
+    onAuthStateChanged(auth, async (u)=>{
+      state.user = u;
+      renderAuth();
+      if(u){
+        // upsert user profile
+        await setDoc(doc(db,'users',u.uid),{
+          uid:u.uid, displayName:u.displayName||'Без имени', photoURL:u.photoURL||'',
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'local',
+          groupId: state.groupId,
+          updatedAt: Timestamp.now()
+        }, { merge:true });
+      }
+      updateGroupUI();
+      refreshAll();
     });
-    auth.getRedirectResult().catch(err => console.warn("[AUTH] redirect error:", err));
 
-    // ========= Утилиты / данные =========
-    const THEME_KEY = "hydro_theme";
-    const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
-    const fmtLiters = (ml) => (ml / 1000).toFixed(2).replace(/\.00$/, "") + " л";
-    const todayISO = (d = new Date()) => d.toISOString().slice(0, 10);
-    const sameDay    = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-    const isSameMonth= (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
-    const isSameYear = (a,b)=> a.getFullYear()===b.getFullYear();
-    const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
-    const DEFAULT_DRINKS = [
-      { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
-      { id:"tea",         name:"Чай",             emoji:"🍵", waterFraction:0.99 },
-      { id:"milk",        name:"Молоко",          emoji:"🥛", waterFraction:0.87 },
-      { id:"cola_light",  name:"Кола Лайт",       emoji:"🥤", waterFraction:0.99 },
-      { id:"cola_zero",   name:"Кола без сахара", emoji:"🥤", waterFraction:0.99 },
-      { id:"kvass",       name:"Квас",            emoji:"🍺", waterFraction:0.96 },
-      { id:"juice",       name:"Сок",             emoji:"🧃", waterFraction:0.88 },
-      { id:"lemonade",    name:"Лимонад",         emoji:"🍋", waterFraction:0.90 },
-    ];
-    function cx(...c){return c.filter(Boolean).join(" ");}
-
-    // ========= Hooks =========
-    function useTheme(){
-      const [theme, setTheme] = React.useState(()=>{
-        const saved = localStorage.getItem(THEME_KEY);
-        return saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      });
-      React.useEffect(()=>{
-        const root = document.documentElement;
-        if(theme==="dark") root.classList.add("dark"); else root.classList.remove("dark");
-        root.style.colorScheme = theme;
-        localStorage.setItem(THEME_KEY, theme);
-      },[theme]);
-      return { theme, setTheme };
+    // =====================
+    // 6) Group handling
+    // =====================
+    function updateGroupUI(){
+      groupLabelEl.textContent = state.groupId;
+      groupInput.value = state.groupId;
+      groupHint.textContent = 'Код группы хранится локально и в вашем профиле';
     }
 
-    // Вход: popup, при проблемах — redirect
-    function useAuth(){
-      const [user,setUser] = React.useState(null);
-      React.useEffect(()=>auth.onAuthStateChanged((u)=>{console.log("[AUTH] state:",u?.uid||null); setUser(u);}),[]);
-      const signInGoogle = React.useCallback(async ()=>{
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt:"select_account" });
-        try { await auth.signInWithPopup(provider); return; }
-        catch(err){
-          console.warn("[AUTH] popup error:", err?.code, err?.message);
-          const fallback = ["auth/operation-not-supported-in-this-environment","auth/popup-blocked","auth/popup-closed-by-user"].includes(err?.code);
-          if(!fallback){ alert("Google Sign-in: "+(err?.code||"")+" — "+(err?.message||"")); return; }
-        }
-        try{ await auth.signInWithRedirect(provider); }
-        catch(err){ console.warn("[AUTH] redirect error:", err); alert("Redirect: "+(err?.code||"")+" — "+(err?.message||"")); }
-      },[]);
-      const signInAnon = React.useCallback(()=>auth.signInAnonymously().catch(e=>alert("Anon: "+(e?.code||"")+" — "+(e?.message||""))),[]);
-      const signOut = React.useCallback(()=>auth.signOut(),[]);
-      return { user, signInGoogle, signInAnon, signOut };
-    }
-
-    function getHashRoomId(){ const m = location.hash.match(/room=([A-Za-z0-9_-]+)/); return m ? m[1] : ""; }
-
-    function useRoom(roomId){
-      const [entries,setEntries] = React.useState([]);
-      const [members,setMembers] = React.useState([]);
-      React.useEffect(()=>{
-        if(!roomId) return;
-        const un1 = db.collection("rooms").doc(roomId).collection("entries").orderBy("ts","desc")
-          .onSnapshot(s=>setEntries(s.docs.map(d=>({id:d.id,...d.data()}))));
-        const un2 = db.collection("rooms").doc(roomId).collection("members")
-          .onSnapshot(s=>setMembers(s.docs.map(d=>({id:d.id,...d.data()}))));
-        return ()=>{un1();un2();};
-      },[roomId]);
-      return { entries, members };
-    }
-
-    // ========= Firestore ops =========
-    async function createRoom(name, ownerId){
-      const ref = await db.collection("rooms").add({
-        name: name || "Новая комната",
-        ownerId: ownerId || null,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      return ref.id;
-    }
-    async function joinRoom(roomId, user, name){
-      if(!roomId||!user) return;
-      await db.collection("rooms").doc(roomId).collection("members").doc(user.uid).set({
-        userId: user.uid,
-        name: name || user.displayName || "Гость",
-        joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-    }
-    async function addDrinkCloud(roomId,user,{ml,drinkId,userName}){
-      if(!roomId||!user) return;
-      await db.collection("rooms").doc(roomId).collection("entries").add({
-        userId: user.uid,
-        userName: userName || "Гость",
-        ml: Math.round(ml),
-        drinkId,
-        ts: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-    async function undoLastForCurrentCloud(roomId,user){
-      if(!roomId||!user) return;
-      const q = await db.collection("rooms").doc(roomId).collection("entries")
-        .where("userId","==",user.uid).orderBy("ts","desc").limit(1).get();
-      if(!q.empty) await q.docs[0].ref.delete();
-    }
-    async function setUserLastRoom(uid,roomId){
-      if(!uid) return;
-      await db.collection("users").doc(uid).set({
-        lastRoomId: roomId || "",
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true});
-    }
-    async function getUserLastRoom(uid){
-      if(!uid) return "";
-      const s = await db.collection("users").doc(uid).get();
-      return s.exists ? (s.data()?.lastRoomId || "") : "";
-    }
-
-    // ========= Авто-подключение к комнате (с приоритетом lastRoomId) =========
-    function useAutoRoom(user, roomId, setRoomId){
-      React.useEffect(()=>{
-        if(!user) return;
-        let picked = false;
-
-        // 0) сначала lastRoomId
-        (async ()=>{
-          try{
-            if(picked || roomId) return;
-            const last = await getUserLastRoom(user.uid);
-            if(last){
-              picked = true;
-              setRoomId(last);
-              await joinRoom(last, user, user.displayName || "Гость");
-            }
-          }catch(e){ console.warn("[AUTO-ROOM] lastRoomId:", e); }
-        })();
-
-        // 1) слушаем членства пользователя
-        const unsub = db.collectionGroup("members")
-          .where("userId","==",user.uid)
-          .onSnapshot(async (snap)=>{
-            if(picked || roomId) return;
-            if(snap.empty) return;
-            let best = { id:"", at:0 };
-            for(const doc of snap.docs){
-              const ref = doc.ref.parent.parent; if(!ref) continue;
-              const at = doc.data()?.joinedAt?.toMillis?.() || 0;
-              if(at >= best.at) best = { id: ref.id, at };
-            }
-            if(best.id){
-              picked = true;
-              setRoomId(best.id);
-              await joinRoom(best.id, user, user.displayName || "Гость");
-              await setUserLastRoom(user.uid, best.id);
-            }
-          }, (err)=>console.warn("[AUTO-ROOM] members listener:", err));
-
-        // 2) fallback: комнаты, где он владелец
-        (async ()=>{
-          try{
-            if(picked || roomId) return;
-            const q = await db.collection("rooms").where("ownerId","==",user.uid)
-                               .orderBy("createdAt","desc").limit(1).get();
-            if(!q.empty){
-              const id = q.docs[0].id;
-              picked = true;
-              setRoomId(id);
-              await joinRoom(id, user, user.displayName || "Гость");
-              await setUserLastRoom(user.uid, id);
-            }
-          }catch(e){ console.warn("[AUTO-ROOM] owner fallback:", e); }
-        })();
-
-        return ()=>unsub && unsub();
-      },[user, roomId, setRoomId]);
-    }
-
-    // ========= Список моих комнат =========
-    function useMyRooms(user){
-      const [myRooms,setMyRooms] = React.useState([]);
-      React.useEffect(()=>{
-        if(!user){ setMyRooms([]); return; }
-        const q = db.collectionGroup("members").where("userId","==",user.uid);
-        const unsub = q.onSnapshot(async (snap)=>{
-          try{
-            const arr = await Promise.all(snap.docs.map(async d=>{
-              const roomRef = d.ref.parent.parent; if(!roomRef) return null;
-              const rs = await roomRef.get();
-              return rs.exists ? { id: roomRef.id, ...rs.data() } : null;
-            }));
-            const seen = new Set(), unique = [];
-            for(const r of arr){ if(r && !seen.has(r.id)){ seen.add(r.id); unique.push(r); } }
-            unique.sort((a,b)=> (b?.createdAt?.toMillis?.()||0)-(a?.createdAt?.toMillis?.()||0));
-            setMyRooms(unique);
-          }catch(err){ console.warn("[MYROOMS] build:", err); }
-        }, err=>console.warn("[MYROOMS] listener:", err));
-        return ()=>unsub && unsub();
-      },[user]);
-      return myRooms;
-    }
-
-    // ========= Delete/Leave =========
-    async function deleteCollectionDeep(colRef,batchSize=200){
-      let snap = await colRef.limit(batchSize).get();
-      while(!snap.empty){
-        const batch = db.batch();
-        snap.docs.forEach(doc=>batch.delete(doc.ref));
-        await batch.commit();
-        snap = await colRef.limit(batchSize).get();
+    saveGroupBtn.addEventListener('click', async ()=>{
+      const val = (groupInput.value||'').trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');
+      state.groupId = val || 'global';
+      localStorage.setItem('hydrace_group', state.groupId);
+      updateGroupUI();
+      if(state.user){
+        await setDoc(doc(db,'users',state.user.uid),{ groupId: state.groupId, updatedAt: Timestamp.now() },{merge:true});
       }
-    }
-    async function deleteRoomDeep(roomId, currentUser){
-      if(!roomId) return;
-      const roomRef = db.collection("rooms").doc(roomId);
-      const roomSnap = await roomRef.get(); if(!roomSnap.exists) return;
-      const data = roomSnap.data() || {};
-      if(data.ownerId && currentUser && data.ownerId !== currentUser.uid){
-        alert("Удалять комнату может только владелец."); return;
-      }
-      if(!confirm("Удалить комнату и все записи? Это необратимо.")) return;
-      await deleteCollectionDeep(roomRef.collection("entries"));
-      await deleteCollectionDeep(roomRef.collection("members"));
-      await roomRef.delete();
-    }
-    async function leaveRoom(roomId, currentUser){
-      if(!roomId||!currentUser) return;
-      if(!confirm("Покинуть эту комнату?")) return;
-      await db.collection("rooms").doc(roomId).collection("members").doc(currentUser.uid).delete();
-    }
+      refreshAll();
+    });
 
-    // ========= UI атомы =========
-    const Card = ({children,className}) => (
-      <div className={cx(
-        "rounded-2xl border shadow-card",
-        "bg-white/70 supports-[backdrop-filter]:bg-white/60 backdrop-blur",
-        "dark:bg-slate-800/60 dark:border-slate-700",
-        className
-      )}>{children}</div>
-    );
-    const SegBtn = ({active,children,onClick}) => (
-      <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
-        active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-               : "bg-white/70 dark:bg-slate-800/60"
-      )}>{children}</button>
-    );
+    // =====================
+    // 7) Add drink buttons
+    // =====================
+    document.querySelectorAll('.amounts button[data-ml]').forEach(btn=>{
+      btn.addEventListener('click', ()=> addDrink(parseInt(btn.dataset.ml,10)));
+    });
+    document.getElementById('addCustomBtn').addEventListener('click',()=>{
+      const ml = parseInt(document.getElementById('customMl').value,10);
+      if(!ml || ml<=0) return alert('Введите положительное число мл');
+      addDrink(ml);
+      document.getElementById('customMl').value='';
+    });
 
-    // ========= App =========
-    function App(){
-      const { theme, setTheme } = useTheme();
-      const { user, signInGoogle, signInAnon, signOut } = useAuth();
-
-      const [period,setPeriod] = React.useState("day");
-      const [selectedDate,setSelectedDate] = React.useState(todayISO());
-      const [drinkId,setDrinkId] = React.useState("water");
-      const [roomId, setRoomId] = React.useState(getHashRoomId());
-      const [displayName, setDisplayName] = React.useState("");
-
-      // hash <-> state
-      React.useEffect(()=>{
-        const onHash = ()=> setRoomId(getHashRoomId());
-        addEventListener("hashchange", onHash);
-        return ()=> removeEventListener("hashchange", onHash);
-      },[]);
-      React.useEffect(()=>{
-        if(roomId){
-          const h = `#room=${roomId}`;
-          if(location.hash !== h) history.replaceState(null,"",h);
-        }else if(location.hash){ history.replaceState(null,""," "); }
-      },[roomId]);
-
-      // Автоподключение к комнате (приоритет lastRoomId)
-      useAutoRoom(user, roomId, setRoomId);
-
-      // Всегда запоминаем текущую комнату как последнюю
-      React.useEffect(()=>{
-        if(!user || !roomId) return;
-        setUserLastRoom(user.uid, roomId).catch(e=>console.warn("setUserLastRoom:", e));
-      },[user, roomId]);
-
-      const myRooms = useMyRooms(user);
-      const { entries, members } = useRoom(roomId);
-
-      // sync имя участника
-      React.useEffect(()=>{
-        if(!user || !roomId) return;
-        const me = members.find(m=>m.id===user.uid);
-        if(me?.name && !displayName) setDisplayName(me.name);
-        if(!me) joinRoom(roomId, user, displayName || user.displayName || "Гость");
-      },[user, roomId, members]); // eslint-disable-line
-
-      const memberMap = React.useMemo(()=>{
-        const m = new Map(); members.forEach(x=>m.set(x.id,x)); return m;
-      },[members]);
-
-      const entriesForPeriod = React.useMemo(()=>{
-        const sel = new Date(selectedDate+"T12:00:00");
-        return entries.filter(e=>{
-          const d = tsToDate(e.ts);
-          if(period==="day") return sameDay(d,sel);
-          if(period==="month") return isSameMonth(d,sel);
-          if(period==="year") return isSameYear(d,sel);
-          return false;
+    async function addDrink(ml){
+      if(!state.user){ alert('Сначала войдите через Google'); return; }
+      try{
+        await addDoc(collection(db,'groups',state.groupId,'drinks'),{
+          uid: state.user.uid,
+          ml,
+          ts: Timestamp.now(),
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'local'
         });
-      },[entries,selectedDate,period]);
-
-      const totals = React.useMemo(()=>{
-        const by = new Map();
-        for(const e of entriesForPeriod){
-          const dr = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {waterFraction:1};
-          const water = Math.round(e.ml * (dr.waterFraction ?? 1));
-          const cur = by.get(e.userId) || { userId:e.userId, waterMl:0, totalMl:0 };
-          cur.waterMl += water; cur.totalMl += e.ml; by.set(e.userId, cur);
-        }
-        return Array.from(by.values())
-          .map(v=>({...v, name: memberMap.get(v.userId)?.name || "Участник"}))
-          .sort((a,b)=> b.waterMl - a.waterMl);
-      },[entriesForPeriod, memberMap]);
-
-      const myHistory = React.useMemo(()=>{
-        if(!user) return [];
-        return entries.filter(e=>e.userId===user.uid).slice(0,20);
-      },[entries,user]);
-
-      async function handleAddDrink(ml){
-        if(!user || !roomId) return;
-        const name = displayName || user.displayName || "Гость";
-        await joinRoom(roomId, user, name);
-        await addDrinkCloud(roomId, user, { ml, drinkId, userName: name });
+        refreshAll();
+      }catch(e){
+        alert('Не удалось сохранить запись: '+e.message);
       }
-      async function handleUndo(){ if(user && roomId) await undoLastForCurrentCloud(roomId,user); }
-      async function handleCreateRoom(){
-        if(!user) return;
-        const name = prompt("Название комнаты?") || "Наша команда";
-        const id = await createRoom(name, user.uid);
-        setRoomId(id);
-        await joinRoom(id, user, displayName || user.displayName || "Гость");
-        await setUserLastRoom(user.uid, id);
-      }
-      async function handleJoinExisting(id){
-        if(!user || !id) return;
-        setRoomId(id);
-        await joinRoom(id, user, displayName || user.displayName || "Гость");
-        await setUserLastRoom(user.uid, id);
-      }
-      function copyInvite(){
-        const url = location.origin + location.pathname + `#room=${roomId}`;
-        navigator.clipboard?.writeText(url);
-        alert("Ссылка скопирована:\n"+url);
-      }
-      async function goToRoom(id){
-        if(!user || !id) return;
-        setRoomId(id);
-        await joinRoom(id, user, displayName || user.displayName || "Гость");
-        await setUserLastRoom(user.uid, id);
-      }
-      async function handleDeleteRoom(id){
-        await deleteRoomDeep(id, user);
-        if(id===roomId){ setRoomId(""); await setUserLastRoom(user.uid,""); }
-      }
-      async function handleLeaveRoom(id){
-        await leaveRoom(id, user);
-        if(id===roomId){ setRoomId(""); await setUserLastRoom(user.uid,""); }
-      }
-
-      const Header = () => (
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              HydroRace <span className="align-middle">💧</span>
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Лайв-соревнование по <span className="font-semibold">водному эквиваленту</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
-              <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
-              <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
-            </div>
-            <input type="date" value={selectedDate} onChange={e=>setSelectedDate(e.target.value)}
-                   className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"/>
-            <button onClick={()=>setTheme(theme==="dark"?"light":"dark")}
-              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition">
-              {theme==="dark"?"🌙 Dark":"🌞 Light"}
-            </button>
-          </div>
-        </div>
-      );
-
-      const MyRoomsCard = () => (
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold">Мои комнаты</h2>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length||0}</span>
-          </div>
-          {!myRooms.length && <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет. Создайте или присоединитесь по ID.</div>}
-          <ul className="space-y-2">
-            {myRooms.map(r=>{
-              const isOwner = r.ownerId && user && r.ownerId===user.uid;
-              return (
-                <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/60 dark:bg-slate-800/50">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{r.name || "Без названия"}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">ID: <code className="font-mono">{r.id}</code></div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={()=>goToRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">Перейти</button>
-                    {isOwner
-                      ? <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
-                      : <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      );
-
-      if(!user){
-        return (
-          <div className="min-h-full p-6 flex items-center justify-center">
-            <Card className="max-w-md w-full p-6 text-center">
-              <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
-              <p className="text-slate-600 dark:text-slate-300 mb-6">Войдите, чтобы синхронизировать записи между устройствами.</p>
-              <div className="grid gap-2">
-                <button onClick={signInGoogle} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
-                <button onClick={signInAnon} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">Добавьте домен в <em>Authentication → Authorized domains</em>.</p>
-            </Card>
-          </div>
-        );
-      }
-
-      if(!roomId){
-        return (
-          <div className="min-h-full p-6">
-            <div className="max-w-4xl mx-auto grid gap-6">
-              <Header />
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card className="p-6">
-                  <h2 className="font-semibold mb-3">Создать комнату</h2>
-                  <label className="text-sm block mb-3">
-                    Ваше имя:
-                    <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Например, Артём"
-                      className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
-                  </label>
-                  <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">➕ Создать комнату</button>
-                  <div className="mt-4"><button onClick={signOut} className="text-sm underline">Выйти из аккаунта</button></div>
-                </Card>
-
-                <Card className="p-6">
-                  <h2 className="font-semibold mb-3">Присоединиться по ID</h2>
-                  <JoinForm onJoin={handleJoinExisting} onSetName={setDisplayName} displayName={displayName}/>
-                </Card>
-              </div>
-
-              <MyRoomsCard />
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="min-h-full p-4 md:p-8">
-          <div className="max-w-6xl mx-auto grid gap-6">
-            <Header />
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Card className="px-3 py-2">
-                <div className="text-sm">
-                  Комната: <code className="font-mono">{roomId}</code>
-                  <button onClick={copyInvite} className="ml-2 text-sm underline decoration-dashed underline-offset-4">Скопировать ссылку</button>
-                </div>
-              </Card>
-              <Card className="px-3 py-2">
-                <div className="text-sm">
-                  Вы вошли как: <strong>{displayName || user.displayName || "Гость"}</strong>
-                  <button onClick={async()=>{
-                    const n = prompt("Ваше имя:", displayName || user.displayName || "Гость") || "";
-                    setDisplayName(n);
-                    await joinRoom(roomId, user, n);
-                    await setUserLastRoom(user.uid, roomId);
-                  }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
-                </div>
-              </Card>
-              <button onClick={signOut} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-6">
-              <Card className="p-4">
-                <h2 className="font-semibold mb-3">Участники</h2>
-                <ul className="space-y-1 text-sm">
-                  {members.map(m=>(
-                    <li key={m.id} className="flex items-center justify-between">
-                      <span>{m.name || "Участник"}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{m.id===user.uid ? "это вы" : ""}</span>
-                    </li>
-                  ))}
-                  {!members.length && <li className="text-slate-500 dark:text-slate-400">Пока никого</li>}
-                </ul>
-              </Card>
-
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Добавить напиток {displayName ? `для ${displayName}` : ""}</h2>
-                </div>
-
-                <div className="mb-3">
-                  <div className="flex gap-2 overflow-auto pb-1">
-                    {DEFAULT_DRINKS.map(d=>(
-                      <button key={d.id} onClick={()=>setDrinkId(d.id)}
-                        className={cx("px-3 py-2 rounded-xl border whitespace-nowrap transition",
-                          "border-slate-200 dark:border-slate-700",
-                          drinkId===d.id ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300" : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
-                        )}
-                        title={`Доля воды ~ ${Math.round((d.waterFraction??1)*100)}%`}
-                      >
-                        <span className="mr-1">{d.emoji}</span>{d.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.glass)}>
-                    🥛 Стакан
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.glass)}</div>
-                  </button>
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.bottle05)}>
-                    🧴 Бутылка 0.5
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle05)}</div>
-                  </button>
-                  <button className="rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-6 hover:brightness-95 transition" onClick={()=>handleAddDrink(ML.bottle15)}>
-                    🧴 Бутылка 1.5
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{fmtLiters(ML.bottle15)}</div>
-                  </button>
-                </div>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <button className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition" onClick={handleUndo}>↩️ Отменить последний</button>
-                </div>
-
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold mb-1">Ваши последние записи</h3>
-                  <ul className="text-sm max-h-40 overflow-auto space-y-1">
-                    {myHistory.map(e=>{
-                      const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
-                      const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
-                      const dt = tsToDate(e.ts);
-                      return (
-                        <li key={e.id} className="flex justify-between">
-                          <span>{d.emoji} {d.name} — {fmtLiters(e.ml)} <span className="text-slate-500 dark:text-slate-400">(вода: {fmtLiters(waterMl)})</span></span>
-                          <span className="text-slate-500 dark:text-slate-400">{dt.toLocaleString()}</span>
-                        </li>
-                      );
-                    })}
-                    {!myHistory.length && <li className="text-slate-500 dark:text-slate-400">Пока нет записей</li>}
-                  </ul>
-                </div>
-              </Card>
-
-              <MyRoomsCard />
-            </div>
-
-            <Card className="p-4">
-              <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
-              <ul className="space-y-1 text-sm max-h-80 overflow-auto">
-                {entriesForPeriod
-                  .sort((a,b)=> tsToDate(b.ts) - tsToDate(a.ts))
-                  .map(e=>{
-                    const mem = memberMap.get(e.userId);
-                    const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
-                    const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
-                    const dt = tsToDate(e.ts);
-                    return (
-                      <li key={e.id} className="flex items-center justify-between">
-                        <span><strong>{mem?.name || "Участник"}</strong> — {d.emoji} {d.name} • {fmtLiters(e.ml)} <span className="text-slate-500 dark:text-slate-400">(вода: {fmtLiters(waterMl)})</span></span>
-                        <span className="text-slate-500 dark:text-slate-400">{dt.toLocaleString()}</span>
-                      </li>
-                    );
-                  })}
-                {!entriesForPeriod.length && <li className="text-slate-500 dark:text-slate-400">Нет записей за период</li>}
-              </ul>
-            </Card>
-
-            <p className="text-xs text-slate-600 dark:text-slate-400 text-center py-2">
-              Сделано на React + Tailwind. Данные — Firebase Firestore.
-            </p>
-          </div>
-        </div>
-      );
     }
 
-    function JoinForm({ onJoin, onSetName, displayName }){
-      const [id,setId] = React.useState("");
-      return (
-        <div>
-          <label className="text-sm block mb-3">
-            Ваше имя:
-            <input value={displayName} onChange={e=>onSetName(e.target.value)} placeholder="Например, Артём"
-              className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
-          </label>
-          <label className="text-sm block mb-3">
-            ID комнаты:
-            <input value={id} onChange={e=>setId(e.target.value)} placeholder="Вставьте ROOM_ID"
-              className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
-          </label>
-          <button onClick={()=>onJoin(id)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">⬇️ Войти в комнату</button>
-        </div>
-      );
+    // =====================
+    // 8) Leaderboard & totals
+    // =====================
+    const tabs = document.getElementById('periodTabs');
+    tabs.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.tab');
+      if(!btn) return;
+      tabs.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      state.period = btn.dataset.period;
+      refreshAll();
+    });
+
+    async function refreshAll(){
+      await Promise.all([refreshTodayTotal(), refreshLeaderboard()]);
     }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App/>);
+    async function refreshTodayTotal(){
+      if(!state.user){ todayTotalEl.textContent='0 мл'; return; }
+      const {start,end} = startEndOf('day');
+      const q = query(
+        collection(db,'groups',state.groupId,'drinks'),
+        where('uid','==',state.user.uid),
+        where('ts','>=',start),
+        where('ts','<',end),
+        orderBy('ts','desc')
+      );
+      const snap = await getDocs(q);
+      let sum = 0; snap.forEach(d=> sum += (d.data().ml||0));
+      todayTotalEl.textContent = sum + ' мл';
+    }
+
+    async function refreshLeaderboard(){
+      const {start,end} = startEndOf(state.period);
+      const q = query(
+        collection(db,'groups',state.groupId,'drinks'),
+        where('ts','>=',start),
+        where('ts','<',end)
+      );
+      const snap = await getDocs(q);
+      const byUser = new Map();
+      snap.forEach(docu=>{
+        const {uid,ml} = docu.data();
+        byUser.set(uid,(byUser.get(uid)||0)+(ml||0));
+      });
+      const arr = [...byUser.entries()].sort((a,b)=>b[1]-a[1]);
+
+      // Fetch names
+      const rows = [];
+      for(const [uid,sum] of arr){
+        let name = 'Без имени';
+        let photo = '';
+        try{
+          const udoc = await getDoc(doc(db,'users',uid));
+          if(udoc.exists()){
+            const d = udoc.data();
+            name = d.displayName || name; photo = d.photoURL || '';
+          }
+        }catch{}
+        rows.push({uid,name,photo,sum});
+      }
+      renderLeaderboard(rows);
+    }
+
+    function renderLeaderboard(rows){
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = `<tr><th>#</th><th>Участник</th><th>Объём</th></tr>`;
+      table.appendChild(thead);
+      const tb = document.createElement('tbody');
+      rows.forEach((r,i)=>{
+        const tr = document.createElement('tr');
+        if(state.user && r.uid===state.user.uid) tr.className='me';
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td class="row"><img class="avatar" src="${r.photo}" alt=""/> <span>${r.name}</span></td>
+          <td><strong>${r.sum}</strong> мл</td>`;
+        tb.appendChild(tr);
+      });
+      if(rows.length===0){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="3" class="hint">Пока нет записей за выбранный период.</td>`;
+        tb.appendChild(tr);
+      }
+      table.appendChild(tb);
+      leaderboardArea.innerHTML = '';
+      leaderboardArea.appendChild(table);
+    }
+
+    // First render
+    updateGroupUI();
+    renderAuth();
   </script>
+
+  <!--
+  =====================
+  Минимальные правила безопасности Firestore (пример — настройте в консоли):
+  =====================
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /users/{uid} {
+        allow read: if request.auth!=null;
+        allow write: if request.auth!=null && request.auth.uid == uid;
+      }
+      match /groups/{group}/drinks/{doc} {
+        allow read: if request.auth!=null;
+        allow create: if request.auth!=null && request.resource.data.uid == request.auth.uid;
+      }
+    }
+  }
+  -->
 </body>
 </html>
