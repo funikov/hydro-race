@@ -120,39 +120,59 @@
       return { theme, setTheme };
     }
 
-    function useAuth() {
-      const [user, setUser] = React.useState(null);
-      React.useEffect(() => {
-        const unsub = auth.onAuthStateChanged((u) => {
-          console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
-          setUser(u);
-        });
-        return unsub;
-      }, []);
+function useAuth() {
+  const [user, setUser] = React.useState(null);
 
-      const signInGoogle = React.useCallback(() => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        const p = auth.signInWithRedirect(provider);
-        if (p && typeof p.catch === "function") {
-          p.catch((err) => {
-            console.warn("[AUTH] signInWithRedirect error:", err);
-            alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-          });
-        }
-      }, []);
+  React.useEffect(() => {
+    const unsub = auth.onAuthStateChanged((u) => {
+      console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
+      setUser(u);
+    });
+    return unsub;
+  }, []);
 
-      const signInAnon = React.useCallback(() => {
-        return auth.signInAnonymously().catch((err)=>{
-          console.warn("[AUTH] signInAnonymously error:", err);
-          alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-        });
-      }, []);
+  const signInGoogle = React.useCallback(async () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
 
-      const signOut = React.useCallback(() => auth.signOut(), []);
+    // 1) пробуем попап (для десктопа/нормальных окружений)
+    try {
+      await auth.signInWithPopup(provider);
+      return;
+    } catch (err) {
+      console.warn("[AUTH] signInWithPopup error:", err?.code, err?.message);
+      // 2) авто-фоллбек на redirect в типичных кейсах
+      const shouldFallback =
+        err?.code === "auth/operation-not-supported-in-this-environment" ||
+        err?.code === "auth/popup-blocked" ||
+        err?.code === "auth/popup-closed-by-user";
 
-      return { user, signInGoogle, signInAnon, signOut };
+      if (!shouldFallback) {
+        alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+        return;
+      }
     }
+
+    // redirect — более «неубиваемый», особенно на мобиле и в webview
+    try {
+      await auth.signInWithRedirect(provider);
+    } catch (err) {
+      console.warn("[AUTH] signInWithRedirect error:", err);
+      alert("Google Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
+    }
+  }, []);
+
+  const signInAnon = React.useCallback(() => {
+    return auth.signInAnonymously().catch((err)=>{
+      console.warn("[AUTH] signInAnonymously error:", err);
+      alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+    });
+  }, []);
+
+  const signOut = React.useCallback(() => auth.signOut(), []);
+
+  return { user, signInGoogle, signInAnon, signOut };
+}
 
     function useDrinksConfig(){
       const [drinks, setDrinks] = React.useState(()=>{
