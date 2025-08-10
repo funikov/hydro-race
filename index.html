@@ -26,6 +26,7 @@
   <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- React + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -52,12 +53,12 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init ======
+    // ====== Firebase init (вставь сюда ACTUAL конфиг из консоли Firebase) ======
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "<<<YOUR_API_KEY_HERE>>>",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
-      storageBucket: "hydro-race.firebasestorage.app",
+      storageBucket: "hydro-race.appspot.com",
       messagingSenderId: "644586947662",
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
@@ -65,7 +66,7 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
-    // ====== Auth: persistence + redirect handling ======
+    // ====== Auth: persistence + redirect result ======
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
       console.warn("[AUTH] setPersistence error:", e);
       alert("setPersistence error: " + (e?.code || "") + " — " + (e?.message || ""));
@@ -120,59 +121,41 @@
       return { theme, setTheme };
     }
 
-function useAuth() {
-  const [user, setUser] = React.useState(null);
+    // — вход: сначала popup (быстрее), если среда не поддерживает — fallback на redirect
+    function useAuth() {
+      const [user, setUser] = React.useState(null);
+      React.useEffect(() => auth.onAuthStateChanged((u)=>{ console.log("[AUTH] state:", u?.uid||null); setUser(u); }), []);
 
-  React.useEffect(() => {
-    const unsub = auth.onAuthStateChanged((u) => {
-      console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
-      setUser(u);
-    });
-    return unsub;
-  }, []);
+      const signInGoogle = React.useCallback(async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: "select_account" });
+        try {
+          await auth.signInWithPopup(provider);
+          return;
+        } catch (err) {
+          console.warn("[AUTH] popup error:", err?.code, err?.message);
+          const fallback =
+            err?.code === "auth/operation-not-supported-in-this-environment" ||
+            err?.code === "auth/popup-blocked" ||
+            err?.code === "auth/popup-closed-by-user";
+          if (!fallback) {
+            alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+            return;
+          }
+        }
+        try { await auth.signInWithRedirect(provider); }
+        catch (err) {
+          console.warn("[AUTH] redirect error:", err);
+          alert("Google Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
+        }
+      }, []);
 
-  const signInGoogle = React.useCallback(async () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-
-    // 1) пробуем попап (для десктопа/нормальных окружений)
-    try {
-      await auth.signInWithPopup(provider);
-      return;
-    } catch (err) {
-      console.warn("[AUTH] signInWithPopup error:", err?.code, err?.message);
-      // 2) авто-фоллбек на redirect в типичных кейсах
-      const shouldFallback =
-        err?.code === "auth/operation-not-supported-in-this-environment" ||
-        err?.code === "auth/popup-blocked" ||
-        err?.code === "auth/popup-closed-by-user";
-
-      if (!shouldFallback) {
-        alert("Google Sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-        return;
-      }
+      const signInAnon = React.useCallback(()=>auth.signInAnonymously().catch((e)=>{
+        console.warn("[AUTH] anon error:", e); alert("Anon sign-in error: " + (e?.code||"") + " — " + (e?.message||""));
+      }),[]);
+      const signOut = React.useCallback(()=>auth.signOut(),[]);
+      return { user, signInGoogle, signInAnon, signOut };
     }
-
-    // redirect — более «неубиваемый», особенно на мобиле и в webview
-    try {
-      await auth.signInWithRedirect(provider);
-    } catch (err) {
-      console.warn("[AUTH] signInWithRedirect error:", err);
-      alert("Google Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
-    }
-  }, []);
-
-  const signInAnon = React.useCallback(() => {
-    return auth.signInAnonymously().catch((err)=>{
-      console.warn("[AUTH] signInAnonymously error:", err);
-      alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-    });
-  }, []);
-
-  const signOut = React.useCallback(() => auth.signOut(), []);
-
-  return { user, signInGoogle, signInAnon, signOut };
-}
 
     function useDrinksConfig(){
       const [drinks, setDrinks] = React.useState(()=>{
@@ -250,7 +233,7 @@ function useAuth() {
       if (!q.empty) await q.docs[0].ref.delete();
     }
 
-    // ====== User profile (последняя комната) ======
+    // ====== User profile (lastRoomId) ======
     async function setUserLastRoom(uid, roomId) {
       if (!uid) return;
       await db.collection("users").doc(uid).set({
@@ -264,7 +247,26 @@ function useAuth() {
       return snap.exists ? (snap.data().lastRoomId || "") : "";
     }
 
-    // ====== Мои комнаты (ФИКС: фильтр по userId) ======
+    // — найти любую комнату по членству (если lastRoomId пуст)
+    async function findAnyRoomForUser(uid) {
+      const snap = await db.collectionGroup("members").where("userId","==", uid).get();
+      if (snap.empty) return "";
+      // выберем самую «свежую» по joinedAt или по созданию комнаты
+      let best = { id:"", at: 0 };
+      for (const doc of snap.docs) {
+        const roomRef = doc.ref.parent.parent; if (!roomRef) continue;
+        const m = doc.data() || {};
+        let at = m?.joinedAt?.toMillis?.() || 0;
+        if (!at) {
+          const rs = await roomRef.get();
+          at = rs?.data?.()?.createdAt?.toMillis?.() || 0;
+        }
+        if (at > best.at) best = { id: roomRef.id, at };
+      }
+      return best.id;
+    }
+
+    // ====== Мои комнаты (список) ======
     function useMyRooms(user){
       const [myRooms, setMyRooms] = React.useState([]);
       React.useEffect(()=>{
@@ -294,7 +296,7 @@ function useAuth() {
       return myRooms;
     }
 
-    // ====== Глубокое удаление / выход ======
+    // ====== Delete / Leave ======
     async function deleteCollectionDeep(colRef, batchSize=200){
       let snap = await colRef.limit(batchSize).get();
       while(!snap.empty){
@@ -345,7 +347,6 @@ function useAuth() {
     function App(){
       const { theme, setTheme } = useTheme();
       const { user, signInGoogle, signInAnon, signOut } = useAuth();
-      const { drinks, drinkById, updateDrinkFraction } = useDrinksConfig();
 
       const [period,setPeriod]=React.useState("day");
       const [selectedDate,setSelectedDate]=React.useState(todayISO());
@@ -371,18 +372,24 @@ function useAuth() {
         }
       }, [roomId]);
 
-      // если вошли и хеша нет — загрузим последнюю комнату пользователя
+      // === АВТО-ВХОД В КОМНАТУ ПОСЛЕ ЛОГИНА ===
       React.useEffect(() => {
         if (!user) return;
-        if (roomId) return;
+        if (roomId) return; // уже есть target (например, открыли по ссылке)
         (async () => {
           try {
-            const last = await getUserLastRoom(user.uid);
-            if (last) {
-              setRoomId(last);
-              await joinRoom(last, user, displayName || user.displayName || "Гость");
+            // 1) пробуем lastRoomId
+            let id = await getUserLastRoom(user.uid);
+            // 2) если нет — ищем любую комнату пользователя
+            if (!id) id = await findAnyRoomForUser(user.uid);
+            if (id) {
+              setRoomId(id);
+              await joinRoom(id, user, user.displayName || "Гость");
+              await setUserLastRoom(user.uid, id);
             }
-          } catch (e) { console.warn("load lastRoomId failed:", e); }
+          } catch (e) {
+            console.warn("auto-join failed:", e);
+          }
         })();
       }, [user, roomId]); // eslint-disable-line
 
@@ -395,8 +402,6 @@ function useAuth() {
         if (member && member.name && !displayName) setDisplayName(member.name);
         if (!member) joinRoom(roomId, user, displayName || user.displayName || "Гость");
       }, [user, roomId, members]); // eslint-disable-line
-
-      const drinkSelected = drinkById.get(drinkId) || drinks[0];
 
       const memberMap = React.useMemo(()=>{
         const m = new Map();
@@ -418,8 +423,8 @@ function useAuth() {
       const totals = React.useMemo(()=>{
         const byId = new Map();
         for (const e of entriesForPeriod) {
-          const drink = drinkById.get(e.drinkId) || { waterFraction: 1 };
-          const waterMl = Math.round(e.ml * (drink.waterFraction ?? 1));
+          const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || { waterFraction: 1 };
+          const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
           const cur = byId.get(e.userId) || { userId: e.userId, waterMl:0, totalMl:0 };
           cur.waterMl += waterMl;
           cur.totalMl += e.ml;
@@ -428,14 +433,13 @@ function useAuth() {
         return Array.from(byId.values())
           .map(v => ({ ...v, name: memberMap.get(v.userId)?.name || "Участник" }))
           .sort((a,b)=> b.waterMl - a.waterMl);
-      }, [entriesForPeriod, drinkById, memberMap]);
+      }, [entriesForPeriod, memberMap]);
 
       const myHistory = React.useMemo(()=>{
         if (!user) return [];
         return entries.filter(e => e.userId === user.uid).slice(0,20);
       }, [entries, user]);
 
-      // actions
       async function handleAddDrink(ml){
         if (!user || !roomId) return;
         const name = displayName || user.displayName || "Гость";
@@ -487,7 +491,6 @@ function useAuth() {
         }
       }
 
-      // UI blocks
       const Header = () => (
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
           <div>
@@ -590,9 +593,6 @@ function useAuth() {
                   <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
                     ➕ Создать комнату
                   </button>
-                  <div className="mt-4">
-                    <button onClick={signOut} className="text-sm underline">Выйти из аккаунта</button>
-                  </div>
                 </Card>
 
                 <Card className="p-6">
@@ -630,7 +630,7 @@ function useAuth() {
                   }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
                 </div>
               </Card>
-              <button onClick={signOut} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
+              <button onClick={()=>auth.signOut()} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
@@ -661,13 +661,10 @@ function useAuth() {
                           "border-slate-200 dark:border-slate-700",
                           drinkId===d.id ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300" : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
                         )}
-                        title={`Доля воды: ${fmtPct((d.waterFraction??1))}`}>
+                        title={`Доля воды: ${fmtPct(d.waterFraction)}`}>
                         <span className="mr-1">{d.emoji}</span>{d.name}
                       </button>
                     ))}
-                  </div>
-                  <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
-                    Выбрано: <strong>{(DEFAULT_DRINKS.find(x=>x.id===drinkId)||{}).emoji} {(DEFAULT_DRINKS.find(x=>x.id===drinkId)||{}).name}</strong> — доля воды {fmtPct((DEFAULT_DRINKS.find(x=>x.id===drinkId)||{waterFraction:1}).waterFraction)}
                   </div>
                 </div>
 
@@ -694,7 +691,7 @@ function useAuth() {
                   <h3 className="text-sm font-semibold mb-1">Ваши последние записи</h3>
                   <ul className="text-sm max-h-40 overflow-auto space-y-1">
                     {myHistory.map((e) => {
-                      const d = (DEFAULT_DRINKS.find(x=>x.id===e.drinkId)) || {emoji:"",name:"",waterFraction:1};
+                      const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
                       const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
                       const dt = tsToDate(e.ts);
                       return (
@@ -719,7 +716,7 @@ function useAuth() {
                   .sort((a, b) => tsToDate(b.ts) - tsToDate(a.ts))
                   .map((e) => {
                     const mem = memberMap.get(e.userId);
-                    const d = (DEFAULT_DRINKS.find(x=>x.id===e.drinkId)) || {emoji:"",name:"",waterFraction:1};
+                    const d = DEFAULT_DRINKS.find(x=>x.id===e.drinkId) || {emoji:"",name:"",waterFraction:1};
                     const waterMl = Math.round(e.ml * (d.waterFraction ?? 1));
                     const dt = tsToDate(e.ts);
                     return (
