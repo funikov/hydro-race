@@ -194,6 +194,20 @@
       if (!q.empty) await q.docs[0].ref.delete();
     }
 
+    // ====== User profile (последняя комната) ======
+    async function setUserLastRoom(uid, roomId) {
+      if (!uid || !roomId) return;
+      await db.collection("users").doc(uid).set({
+        lastRoomId: roomId,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+    async function getUserLastRoom(uid) {
+      if (!uid) return "";
+      const snap = await db.collection("users").doc(uid).get();
+      return snap.exists ? (snap.data().lastRoomId || "") : "";
+    }
+
     // ====== UI components ======
     const Card = ({children, className})=>(
       <div className={cx(
@@ -239,12 +253,28 @@
         }
       }, [roomId]);
 
+      // если вошли и хеша комнаты нет — загрузим последнюю комнату пользователя
+      React.useEffect(() => {
+        if (!user) return;
+        if (roomId) return;
+        (async () => {
+          try {
+            const last = await getUserLastRoom(user.uid);
+            if (last) {
+              setRoomId(last); // этот сет обновит hash другим эффектом
+              await joinRoom(last, user, displayName || user.displayName || "Гость");
+            }
+          } catch (e) {
+            console.warn("load lastRoomId failed:", e);
+          }
+        })();
+      }, [user, roomId]); // eslint-disable-line
+
       const { entries, members } = useRoom(roomId);
 
       // ensure membership name (once user & room ready)
       React.useEffect(()=>{
         if (!user || !roomId) return;
-        // set initial display name
         const member = members.find(m => m.id === user.uid);
         if (member && member.name && !displayName) setDisplayName(member.name);
         if (!member) joinRoom(roomId, user, displayName || user.displayName || "Гость");
@@ -311,11 +341,13 @@
         const id = await createRoom(name);
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
+        await setUserLastRoom(user.uid, id);  // NEW: запомним последнюю комнату
       }
       async function handleJoinExisting(id){
         if (!user || !id) return;
         setRoomId(id);
         await joinRoom(id, user, displayName || user.displayName || "Гость");
+        await setUserLastRoom(user.uid, id);  // NEW: запомним последнюю комнату
       }
       function copyInvite(){
         const url = location.origin + location.pathname + `#room=${roomId}`;
@@ -437,6 +469,7 @@
                     const n = prompt("Ваше имя:", displayName || user.displayName || "Гость") || "";
                     setDisplayName(n);
                     await joinRoom(roomId, user, n);
+                    await setUserLastRoom(user.uid, roomId); // если поменяли имя — всё равно актуализируем lastRoom
                   }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
                 </div>
               </Card>
