@@ -61,7 +61,7 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init (твой конфиг, без модификаций) ======
+    // ====== Firebase init (твой конфиг) ======
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -76,13 +76,13 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Сохраняем сессию между перезагрузками и редиректами
+    // Сохраняем сессию ОДИН РАЗ при старте (не в обработчике клика!)
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
       console.warn("setPersistence failed:", e);
       alert("setPersistence error: " + (e?.code || "") + " " + (e?.message || ""));
     });
 
-    // Завершаем возможный redirect-вход (если был) + ЛОГ ОШИБОК
+    // Завершаем возможный redirect-вход (если был) + лог ошибок
     auth.getRedirectResult()
       .then((res) => {
         if (res && res.user) {
@@ -154,7 +154,7 @@
       return { theme, setTheme };
     }
 
-    // useAuth с persist + popup→redirect и ЛОГОМ ОШИБОК
+    // useAuth: БЕЗ await перед popup! (важно для "user gesture")
     function useAuth() {
       const [user, setUser] = React.useState(null);
       const [loading, setLoading] = React.useState(true);
@@ -168,13 +168,10 @@
 
       async function signInGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
         try {
-          await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          if (isMobile) {
-            await auth.signInWithRedirect(provider);
-            return;
-          }
+          // Сначала пробуем popup сразу, без предварительных await
           await auth.signInWithPopup(provider);
         } catch (err) {
           console.warn("Popup sign-in failed, fallback to redirect:", err);
@@ -473,6 +470,7 @@
                   Войдите, чтобы синхронизировать записи между устройствами.
                 </p>
                 <div className="grid gap-2">
+                  <button onclick="void(0)" style="display:none"></button> <!-- небольшой «разогрев» для жестов -->
                   <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
                   <button onClick={signInAnon} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
                 </div>
