@@ -56,7 +56,7 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ========= Firebase init: ВСТАВЬ СВОЙ АКТУАЛЬНЫЙ КОНФИГ ИЗ КОНСОЛИ =========
+    // ========= Firebase init: вставь актуальный конфиг из консоли Firebase =========
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -69,16 +69,12 @@
     const auth = firebase.auth();
     const db   = firebase.firestore();
 
-    // --- Храним сессию локально, обрабатываем возможные ошибки ---
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
       console.warn("[AUTH] setPersistence error:", e);
     });
-    // --- Если вернулись после redirect (на мобиле/при попап-блоках) ---
-    auth.getRedirectResult()
-      .then(res => { if (res?.user) console.log("[AUTH] redirect OK:", res.user.uid); })
-      .catch(err => console.warn("[AUTH] redirect error:", err));
+    auth.getRedirectResult().catch(err => console.warn("[AUTH] redirect error:", err));
 
-    // ========= Утилиты / константы =========
+    // ========= Утилиты / данные =========
     const THEME_KEY = "hydro_theme";
     const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
     const fmtLiters = (ml) => (ml / 1000).toFixed(2).replace(/\.00$/, "") + " л";
@@ -114,7 +110,7 @@
       return { theme, setTheme };
     }
 
-    // Вход: пробуем popup, при проблемах — redirect
+    // Вход: popup, при проблемах — redirect
     function useAuth(){
       const [user,setUser] = React.useState(null);
       React.useEffect(()=>auth.onAuthStateChanged((u)=>{console.log("[AUTH] state:",u?.uid||null); setUser(u);}),[]);
@@ -197,13 +193,26 @@
       return s.exists ? (s.data()?.lastRoomId || "") : "";
     }
 
-    // ========= Авто-подключение к комнате (реактивно) =========
+    // ========= Авто-подключение к комнате (с приоритетом lastRoomId) =========
     function useAutoRoom(user, roomId, setRoomId){
       React.useEffect(()=>{
         if(!user) return;
         let picked = false;
 
-        // 1) слушаем все членства пользователя
+        // 0) сначала lastRoomId
+        (async ()=>{
+          try{
+            if(picked || roomId) return;
+            const last = await getUserLastRoom(user.uid);
+            if(last){
+              picked = true;
+              setRoomId(last);
+              await joinRoom(last, user, user.displayName || "Гость");
+            }
+          }catch(e){ console.warn("[AUTO-ROOM] lastRoomId:", e); }
+        })();
+
+        // 1) слушаем членства пользователя
         const unsub = db.collectionGroup("members")
           .where("userId","==",user.uid)
           .onSnapshot(async (snap)=>{
@@ -223,13 +232,13 @@
             }
           }, (err)=>console.warn("[AUTO-ROOM] members listener:", err));
 
-        // 2) бэкап: если членства нет — пробуем комнаты, где он владелец
+        // 2) fallback: комнаты, где он владелец
         (async ()=>{
           try{
             if(picked || roomId) return;
             const q = await db.collection("rooms").where("ownerId","==",user.uid)
                                .orderBy("createdAt","desc").limit(1).get();
-            if(!q.empty && !picked && !roomId){
+            if(!q.empty){
               const id = q.docs[0].id;
               picked = true;
               setRoomId(id);
@@ -237,19 +246,6 @@
               await setUserLastRoom(user.uid, id);
             }
           }catch(e){ console.warn("[AUTO-ROOM] owner fallback:", e); }
-        })();
-
-        // 3) ещё один бэкап: если у пользователя был lastRoomId — подтянем
-        (async ()=>{
-          try{
-            if(picked || roomId) return;
-            const last = await getUserLastRoom(user.uid);
-            if(last){
-              picked = true;
-              setRoomId(last);
-              await joinRoom(last, user, user.displayName || "Гость");
-            }
-          }catch(e){ console.warn("[AUTO-ROOM] lastRoomId fallback:", e); }
         })();
 
         return ()=>unsub && unsub();
@@ -349,8 +345,14 @@
         }else if(location.hash){ history.replaceState(null,""," "); }
       },[roomId]);
 
-      // Автоподключение к комнате пользователя (реактивно)
+      // Автоподключение к комнате (приоритет lastRoomId)
       useAutoRoom(user, roomId, setRoomId);
+
+      // Всегда запоминаем текущую комнату как последнюю
+      React.useEffect(()=>{
+        if(!user || !roomId) return;
+        setUserLastRoom(user.uid, roomId).catch(e=>console.warn("setUserLastRoom:", e));
+      },[user, roomId]);
 
       const myRooms = useMyRooms(user);
       const { entries, members } = useRoom(roomId);
@@ -636,32 +638,7 @@
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold">Мои комнаты</h2>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{myRooms.length||0}</span>
-                </div>
-                {!myRooms.length && <div className="text-sm text-slate-500 dark:text-slate-400">Пока нет.</div>}
-                <ul className="space-y-2">
-                  {myRooms.map(r=>{
-                    const isOwner = r.ownerId && user && r.ownerId===user.uid;
-                    return (
-                      <li key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 bg-white/60 dark:bg-slate-800/50">
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{r.name || "Без названия"}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">ID: <code className="font-mono">{r.id}</code></div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button onClick={()=>goToRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">Перейти</button>
-                          {isOwner
-                            ? <button onClick={()=>handleDeleteRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:brightness-95 text-sm">🗑 Удалить</button>
-                            : <button onClick={()=>handleLeaveRoom(r.id)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">🚪 Выйти</button>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
+              <MyRoomsCard />
             </div>
 
             <Card className="p-4">
