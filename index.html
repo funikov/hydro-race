@@ -61,7 +61,7 @@
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init (ТОЧНО твой конфиг, без модификаций) ======
+    // ====== Firebase init (твой конфиг, без модификаций) ======
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -76,12 +76,23 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Завершаем возможный redirect-вход (если был)
-    auth.getRedirectResult().catch((err) => {
-      console.warn("Firebase redirect error:", err);
-      // Не алерчу, чтобы не раздражать, но можно включить при отладке:
-      // alert("Ошибка входа: " + (err?.message || err?.code));
+    // Сохраняем сессию между перезагрузками и редиректами
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
+      console.warn("setPersistence failed:", e);
+      alert("setPersistence error: " + (e?.code || "") + " " + (e?.message || ""));
     });
+
+    // Завершаем возможный redirect-вход (если был) + ЛОГ ОШИБОК
+    auth.getRedirectResult()
+      .then((res) => {
+        if (res && res.user) {
+          console.log("Redirect sign-in success:", res.user.uid);
+        }
+      })
+      .catch((err) => {
+        console.warn("Firebase redirect error:", err);
+        alert("Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
+      });
 
     // ====== Utils / constants ======
     const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1";
@@ -109,6 +120,24 @@
 
     function cx(...classes){ return classes.filter(Boolean).join(" "); }
 
+    // Встроенный браузер приложений? (Telegram/Instagram/Facebook/Gmail и др.)
+    function isInAppBrowser() {
+      const ua = navigator.userAgent || "";
+      const isFB = ua.includes("FBAN") || ua.includes("FBAV") || ua.includes("FB_IAB");
+      const isIG = ua.includes("Instagram");
+      const isLine = ua.includes("Line/");
+      const isWeChat = ua.includes("MicroMessenger");
+      const isTwitter = ua.includes("Twitter");
+      const isTelegram = ua.includes("Telegram");
+      const isGmail = ua.includes("GSA") || ua.includes("Gmail");
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+      return !isStandalone && (isFB || isIG || isLine || isWeChat || isTwitter || isTelegram || isGmail);
+    }
+    function openInExternalBrowser() {
+      // В IAB это зачастую откроет системный «Open in…»
+      window.location.href = window.location.href;
+    }
+
     // ====== Hooks ======
     function useTheme(){
       const [theme, setTheme] = React.useState(()=>{
@@ -125,7 +154,7 @@
       return { theme, setTheme };
     }
 
-    // ОБНОВЛЁННЫЙ useAuth с popup→redirect fallback
+    // useAuth с persist + popup→redirect и ЛОГОМ ОШИБОК
     function useAuth() {
       const [user, setUser] = React.useState(null);
       const [loading, setLoading] = React.useState(true);
@@ -140,6 +169,7 @@
       async function signInGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
+          await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
           if (isMobile) {
             await auth.signInWithRedirect(provider);
@@ -147,18 +177,25 @@
           }
           await auth.signInWithPopup(provider);
         } catch (err) {
-          console.warn("Popup sign-in failed, fallback to redirect:", err?.code);
-          await auth.signInWithRedirect(provider);
+          console.warn("Popup sign-in failed, fallback to redirect:", err);
+          alert("Popup sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+          try {
+            await auth.signInWithRedirect(provider);
+          } catch (err2) {
+            console.warn("Redirect sign-in also failed:", err2);
+            alert("Redirect sign-in error: " + (err2?.code || "") + " — " + (err2?.message || ""));
+          }
         }
       }
 
       function signInAnon() {
-        return auth.signInAnonymously();
+        return auth.signInAnonymously().catch((err)=>{
+          console.warn("Anon sign-in error:", err);
+          alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
+        });
       }
 
-      function signOut() {
-        return auth.signOut();
-      }
+      function signOut() { return auth.signOut(); }
 
       return { user, loading, signInGoogle, signInAnon, signOut };
     }
@@ -273,6 +310,9 @@
       const [displayName, setDisplayName] = React.useState("");
       const [customOpen, setCustomOpen] = React.useState(false);
       const [customMl, setCustomMl] = React.useState(330);
+      const [inApp, setInApp] = React.useState(false);
+
+      React.useEffect(()=> setInApp(isInAppBrowser()), []);
 
       // sync hash <-> state
       React.useEffect(()=>{
@@ -416,26 +456,38 @@
       if (!user) {
         return (
           <div className="min-h-full p-4 md:p-6 flex items-center justify-center">
-            <Card className="max-w-md w-full p-6 text-center">
-              <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
-              <p className="text-slate-600 dark:text-slate-300 mb-6">
-                Войдите, чтобы синхронизировать записи между устройствами.
-              </p>
-              <div className="grid gap-2">
-                <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
-                <button onClick={signInAnon} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
-                Добавьте домен GitHub Pages в <em>Authentication → Authorized domains</em>.
-              </p>
-            </Card>
+            <div className="max-w-md w-full space-y-3">
+              {inApp && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 p-3">
+                  Похоже, страница открыта <b>во встроенном браузере приложения</b> (например, Telegram/Instagram/Gmail).
+                  Google-вход тут часто не работает. Пожалуйста, открой в <b>обычном браузере</b>:
+                  <div className="mt-2 flex gap-2">
+                    <a href={location.href} target="_blank" rel="noopener" className="px-3 py-2 rounded-xl border">Открыть в браузере</a>
+                    <button onClick={openInExternalBrowser} className="px-3 py-2 rounded-xl border">Открыть здесь</button>
+                  </div>
+                </div>
+              )}
+              <Card className="p-6 text-center">
+                <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
+                <p className="text-slate-600 dark:text-slate-300 mb-6">
+                  Войдите, чтобы синхронизировать записи между устройствами.
+                </p>
+                <div className="grid gap-2">
+                  <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
+                  <button onClick={signInAnon} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
+                  Если видите бесконечный вход — откройте ссылку в Safari/Chrome, а не внутри приложения.
+                </p>
+              </Card>
+            </div>
           </div>
         );
       }
 
       if (!roomId) {
         return (
-          <div className="min-h-full p-4 md:p-6 pb-28"> {/* место под нижнюю панель на мобилке */}
+          <div className="min-h-full p-4 md:p-6 pb-28">
             <div className="max-w-3xl mx-auto grid gap-6">
               <Header />
               <Card className="p-6">
@@ -465,15 +517,13 @@
                 </div>
               </Card>
             </div>
-
-            {/* Sticky bottom hint */}
             <BottomBarHint />
           </div>
         );
       }
 
       return (
-        <div className="min-h-full p-4 md:p-8 pb-28"> {/* pb под нижнюю панель */}
+        <div className="min-h-full p-4 md:p-8 pb-28">
           <div className="max-w-6xl mx-auto grid gap-6">
             <Header />
 
@@ -498,7 +548,6 @@
             </div>
 
             <section className="grid lg:grid-cols-3 gap-6">
-              {/* Members */}
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Участники</h2>
                 <ul className="space-y-1 text-sm">
@@ -512,7 +561,6 @@
                 </ul>
               </Card>
 
-              {/* Add drink */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold">Добавить напиток {displayName ? `для ${displayName}` : ""}</h2>
@@ -575,7 +623,6 @@
                 </div>
               </Card>
 
-              {/* Leaderboard */}
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Таблица лидеров — {period === "day" ? "за день" : period === "month" ? "за месяц" : "за год"}</h2>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">Рейтинг по <strong>водному эквиваленту</strong></p>
@@ -597,7 +644,6 @@
               </Card>
             </section>
 
-            {/* Feed */}
             <Card className="p-4">
               <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
               <ul className="space-y-1 text-sm max-h-80 overflow-auto">
@@ -624,7 +670,7 @@
             </p>
           </div>
 
-          {/* Sticky Bottom Action Bar (мобилки/планшеты) */}
+          <!-- Sticky Bottom Action Bar -->
           <div className="fixed bottom-0 inset-x-0 z-50">
             <div className="mx-auto max-w-6xl px-3">
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card bg-white/90 dark:bg-slate-900/90 backdrop-blur safe-bottom">
