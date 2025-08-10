@@ -168,20 +168,12 @@
 
       async function signInGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-
+        provider.setCustomParameters({ prompt: "select_account" });
         try {
-          // Сначала пробуем popup сразу, без предварительных await
-          await auth.signInWithPopup(provider);
+          await auth.signInWithRedirect(provider);
         } catch (err) {
-          console.warn("Popup sign-in failed, fallback to redirect:", err);
-          alert("Popup sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-          try {
-            await auth.signInWithRedirect(provider);
-          } catch (err2) {
-            console.warn("Redirect sign-in also failed:", err2);
-            alert("Redirect sign-in error: " + (err2?.code || "") + " — " + (err2?.message || ""));
-          }
+          console.warn("Redirect sign-in error:", err);
+          alert("Redirect sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
         }
       }
 
