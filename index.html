@@ -2,10 +2,10 @@
 <html lang="ru" class="h-full">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HydroRace 💧</title>
 
-  <!-- Tailwind config -->
+  <!-- Tailwind config (dark mode by class) -->
   <script>
     window.tailwind = {};
     window.tailwind.config = {
@@ -23,7 +23,7 @@
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Inter -->
+  <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -49,18 +49,14 @@
       document.documentElement.style.colorScheme = wantDark ? "dark" : "light";
     })();
   </script>
-  <style>
-    html, body { height: 100%; }
-    .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
-    .safe-top { padding-top: calc(env(safe-area-inset-top) + 8px); }
-  </style>
+  <style>html, body { height: 100%; }</style>
 </head>
 
 <body class="h-full font-sans antialiased bg-gradient-to-br from-brand-50 via-white to-brand-100 dark:from-slate-900 dark:via-slate-950 dark:to-black text-slate-900 dark:text-slate-100">
   <div id="root" class="h-full"></div>
 
   <script type="text/babel">
-    // ====== Firebase init (твой конфиг) ======
+    // ====== Firebase init with YOUR config ======
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -69,37 +65,12 @@
       messagingSenderId: "644586947662",
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
-    if (!firebase.apps || firebase.apps.length === 0) {
-      firebase.initializeApp(firebaseConfig);
-      console.log("[INIT] Firebase initialized");
-    }
+    firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Persist session ONCE at startup
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .then(()=> console.log("[AUTH] persistence: LOCAL"))
-      .catch((e)=>{
-        console.warn("[AUTH] setPersistence failed:", e);
-        alert("setPersistence error: " + (e?.code || "") + " — " + (e?.message || ""));
-      });
-
-    // Handle redirect result (if any)
-    auth.getRedirectResult()
-      .then((res) => {
-        if (res && res.user) {
-          console.log("[AUTH] Redirect success. uid=", res.user.uid);
-        } else {
-          console.log("[AUTH] No redirect user (first load or already signed-in).");
-        }
-      })
-      .catch((err) => {
-        console.warn("[AUTH] Redirect error:", err);
-        alert("Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
-      });
-
     // ====== Utils / constants ======
-    const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1";
+    const STORAGE_KEY_DRINKS = "hydro_drinks_cfg_v1"; // локально: доли воды и т.п.
     const THEME_KEY = "hydro_theme";
 
     const ML = { glass: 250, bottle05: 500, bottle15: 1500 };
@@ -109,7 +80,6 @@
     const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
     const isSameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
     const isSameYear = (a,b) => a.getFullYear()===b.getFullYear();
-    const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
 
     const DEFAULT_DRINKS = [
       { id:"water",       name:"Вода",            emoji:"💧", waterFraction:1.00 },
@@ -123,19 +93,7 @@
     ];
 
     function cx(...classes){ return classes.filter(Boolean).join(" "); }
-    function isInAppBrowser() {
-      const ua = navigator.userAgent || "";
-      const isFB = ua.includes("FBAN") || ua.includes("FBAV") || ua.includes("FB_IAB");
-      const isIG = ua.includes("Instagram");
-      const isLine = ua.includes("Line/");
-      const isWeChat = ua.includes("MicroMessenger");
-      const isTwitter = ua.includes("Twitter");
-      const isTelegram = ua.includes("Telegram");
-      const isGmail = ua.includes("GSA") || ua.includes("Gmail");
-      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
-      return !isStandalone && (isFB || isIG || isLine || isWeChat || isTwitter || isTelegram || isGmail);
-    }
-    function openInExternalBrowser() { window.location.href = window.location.href; }
+    const tsToDate = (ts) => ts && typeof ts.toDate === "function" ? ts.toDate() : new Date(ts || Date.now());
 
     // ====== Hooks ======
     function useTheme(){
@@ -153,42 +111,13 @@
       return { theme, setTheme };
     }
 
-    // useAuth — REDIRECT ONLY + жёсткие логи
     function useAuth() {
       const [user, setUser] = React.useState(null);
-      const [loading, setLoading] = React.useState(true);
-
-      React.useEffect(() => {
-        return auth.onAuthStateChanged((u) => {
-          console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
-          setUser(u);
-          setLoading(false);
-        });
-      }, []);
-
-      async function signInGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: "select_account" });
-        try {
-          console.log("[AUTH] signInWithRedirect() call");
-          alert("GOOGLE SIGN-IN: start redirect…");
-          await auth.signInWithRedirect(provider);
-        } catch (err) {
-          console.warn("[AUTH] Redirect sign-in error:", err);
-          alert("Redirect sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-        }
-      }
-
-      function signInAnon() {
-        return auth.signInAnonymously().catch((err)=>{
-          console.warn("[AUTH] Anon sign-in error:", err);
-          alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
-        });
-      }
-
-      function signOut() { return auth.signOut(); }
-
-      return { user, loading, signInGoogle, signInAnon, signOut };
+      React.useEffect(() => auth.onAuthStateChanged(setUser), []);
+      const signInGoogle = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      const signInAnon   = () => auth.signInAnonymously();
+      const signOut      = () => auth.signOut();
+      return { user, signInGoogle, signInAnon, signOut };
     }
 
     function useDrinksConfig(){
@@ -276,34 +205,24 @@
     );
 
     const SegBtn = ({active, children, onClick})=>(
-      <button
-        onClick={onClick}
-        className={cx(
-          "px-3 py-2 min-h-[44px] text-sm transition-colors",
-          active
-            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-            : "bg-white/70 dark:bg-slate-800/60"
-        )}
-      >{children}</button>
+      <button onClick={onClick} className={cx("px-3 py-2 text-sm transition-colors",
+        active ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+               : "bg-white/70 dark:bg-slate-800/60"
+      )}>{children}</button>
     );
 
     // ====== App ======
     function App(){
       const { theme, setTheme } = useTheme();
-      const { user, loading, signInGoogle, signInAnon, signOut } = useAuth();
-
+      const { user, signInGoogle, signInAnon, signOut } = useAuth();
       const { drinks, drinkById, updateDrinkFraction } = useDrinksConfig();
+
       const [period,setPeriod]=React.useState("day");
       const [selectedDate,setSelectedDate]=React.useState(todayISO());
       const [drinkId,setDrinkId]=React.useState("water");
       const [showDrinkSettings,setShowDrinkSettings]=React.useState(false);
       const [roomId, setRoomId] = React.useState(getHashRoomId());
       const [displayName, setDisplayName] = React.useState("");
-      const [customOpen, setCustomOpen] = React.useState(false);
-      const [customMl, setCustomMl] = React.useState(330);
-      const [inApp, setInApp] = React.useState(false);
-
-      React.useEffect(()=> setInApp(isInAppBrowser()), []);
 
       // sync hash <-> state
       React.useEffect(()=>{
@@ -322,9 +241,10 @@
 
       const { entries, members } = useRoom(roomId);
 
-      // ensure membership name
+      // ensure membership name (once user & room ready)
       React.useEffect(()=>{
         if (!user || !roomId) return;
+        // set initial display name
         const member = members.find(m => m.id === user.uid);
         if (member && member.name && !displayName) setDisplayName(member.name);
         if (!member) joinRoom(roomId, user, displayName || user.displayName || "Гость");
@@ -332,12 +252,14 @@
 
       const drinkSelected = drinkById.get(drinkId) || drinks[0];
 
+      // derived: members map
       const memberMap = React.useMemo(()=>{
         const m = new Map();
         members.forEach(mem => m.set(mem.id, mem));
         return m;
       }, [members]);
 
+      // filter entries by period
       const entriesForPeriod = React.useMemo(()=>{
         const sel = new Date(selectedDate + "T12:00:00");
         return entries.filter(e=>{
@@ -349,6 +271,7 @@
         });
       }, [entries, selectedDate, period]);
 
+      // leaderboard
       const totals = React.useMemo(()=>{
         const byId = new Map();
         for (const e of entriesForPeriod) {
@@ -364,21 +287,24 @@
           .sort((a,b)=> b.waterMl - a.waterMl);
       }, [entriesForPeriod, drinkById, memberMap]);
 
+      // history for current user
       const myHistory = React.useMemo(()=>{
         if (!user) return [];
         return entries.filter(e => e.userId === user.uid).slice(0,20);
       }, [entries, user]);
 
+      // actions
       async function handleAddDrink(ml){
         if (!user || !roomId) return;
         const name = displayName || user.displayName || "Гость";
-        await joinRoom(roomId, user, name);
+        await joinRoom(roomId, user, name); // ensure name up-to-date
         await addDrinkCloud(roomId, user, { ml, drinkId, userName: name });
       }
       async function handleUndo(){
         if (!user || !roomId) return;
         await undoLastForCurrentCloud(roomId, user);
       }
+
       async function handleCreateRoom(){
         if (!user) return;
         const name = prompt("Название комнаты?") || "Наша команда";
@@ -397,8 +323,9 @@
         alert("Ссылка скопирована:\n" + url);
       }
 
+      // UI blocks
       const Header = () => (
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between safe-top">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               HydroRace <span className="align-middle">💧</span>
@@ -409,71 +336,55 @@
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
-              <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
-              <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
-            </div>
+            <Card className="p-1 border-none shadow-none">
+              <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <SegBtn active={period==="day"}   onClick={()=>setPeriod("day")}>День</SegBtn>
+                <SegBtn active={period==="month"} onClick={()=>setPeriod("month")}>Месяц</SegBtn>
+                <SegBtn active={period==="year"}  onClick={()=>setPeriod("year")}>Год</SegBtn>
+              </div>
+            </Card>
 
             <input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white/80 dark:bg-slate-800/80"
             />
 
             <button
               onClick={()=>setTheme(theme==="dark"?"light":"dark")}
-              className="px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition"
+              className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition"
               title="Переключить тему"
-              aria-label="Переключить тему"
             >
-              {theme==="dark" ? "🌙" : "🌞"}
+              {theme==="dark" ? "🌙 Dark" : "🌞 Light"}
             </button>
           </div>
         </div>
       );
 
-      if (loading) {
-        return (
-          <div className="min-h-full p-4 grid place-items-center">
-            <div className="text-slate-600 dark:text-slate-300">Загрузка…</div>
-          </div>
-        );
-      }
-
       if (!user) {
         return (
-          <div className="min-h-full p-4 md:p-6 flex items-center justify-center">
-            <div className="max-w-md w-full space-y-3">
-              {inApp && (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 p-3">
-                  Похоже, страница открыта <b>во встроенном браузере приложения</b> (например, Telegram/Instagram/Gmail).
-                  Google-вход тут часто не работает. Пожалуйста, открой в <b>обычном браузере</b>.
-                </div>
-              )}
-              <Card className="p-6 text-center">
-                <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
-                <p className="text-slate-600 dark:text-slate-300 mb-6">
-                  Войдите, чтобы синхронизировать записи между устройствами.
-                </p>
-                <div className="grid gap-2">
-                  <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google (redirect)</button>
-                  <a href="https://accounts.google.com" target="_self" className="px-4 py-3 rounded-xl min-h-[44px] border text-sm border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Тест редиректа на google.com</a>
-                  <button onClick={signInAnon} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
-                  Если не начинается переход — пришлите, пожалуйста, что пишет консоль разработчика.
-                </p>
-              </Card>
-            </div>
+          <div className="min-h-full p-6 flex items-center justify-center">
+            <Card className="max-w-md w-full p-6 text-center">
+              <h1 className="text-2xl font-semibold mb-2">HydroRace 💧</h1>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                Войдите, чтобы участвовать и синхронизировать записи между устройствами.
+              </p>
+              <div className="grid gap-2">
+                <button onClick={signInGoogle} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
+                <button onClick={signInAnon} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
+                Домен GitHub Pages должен быть добавлен в <em>Authentication → Authorized domains</em>.
+              </p>
+            </Card>
           </div>
         );
       }
 
       if (!roomId) {
         return (
-          <div className="min-h-full p-4 md:p-6 pb-28">
+          <div className="min-h-full p-6">
             <div className="max-w-3xl mx-auto grid gap-6">
               <Header />
               <Card className="p-6">
@@ -484,9 +395,9 @@
                     <label className="text-sm block mb-3">
                       Ваше имя:
                       <input value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="Например, Артём"
-                        className="mt-1 w-full px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
+                        className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
                     </label>
-                    <button onClick={handleCreateRoom} className="px-4 py-3 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
+                    <button onClick={handleCreateRoom} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
                       ➕ Создать комнату
                     </button>
                   </div>
@@ -508,7 +419,7 @@
       }
 
       return (
-        <div className="min-h-full p-4 md:p-8 pb-28">
+        <div className="min-h-full p-4 md:p-8">
           <div className="max-w-6xl mx-auto grid gap-6">
             <Header />
 
@@ -516,7 +427,7 @@
               <Card className="px-3 py-2">
                 <div className="text-sm">
                   Комната: <code className="font-mono">{roomId}</code>
-                  <button onClick={copyInvite} className="ml-2 text-sm underline decoration-dashed underline-offset-4">Скопировать ссылку</button>
+                  <button onClick={copyInvite} className="ml-2 text-sm underline decoration-dashed underline-offset-4">Скопировать ссылку-приглашение</button>
                 </div>
               </Card>
               <Card className="px-3 py-2">
@@ -529,10 +440,11 @@
                   }} className="ml-2 text-sm underline decoration-dashed underline-offset-4">изменить</button>
                 </div>
               </Card>
-              <button onClick={signOut} className="px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
+              <button onClick={signOut} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Выйти</button>
             </div>
 
             <section className="grid lg:grid-cols-3 gap-6">
+              {/* Members */}
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Участники</h2>
                 <ul className="space-y-1 text-sm">
@@ -546,6 +458,7 @@
                 </ul>
               </Card>
 
+              {/* Add drink */}
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold">Добавить напиток {displayName ? `для ${displayName}` : ""}</h2>
@@ -553,10 +466,10 @@
                 </div>
 
                 <div className="mb-3">
-                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                  <div className="flex gap-2 overflow-auto pb-1">
                     {drinks.map(d=>(
                       <button key={d.id} onClick={()=>setDrinkId(d.id)}
-                        className={cx("px-3 py-2 min-h-[44px] rounded-xl border whitespace-nowrap transition",
+                        className={cx("px-3 py-2 rounded-xl border whitespace-nowrap transition",
                           "border-slate-200 dark:border-slate-700",
                           drinkId===d.id ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300" : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
                         )}
@@ -566,7 +479,7 @@
                     ))}
                   </div>
                   <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
-                    Выбрано: <strong>{(drinkById.get(drinkId)||{}).emoji} {(drinkById.get(drinkId)||{}).name}</strong> — доля воды {fmtPct((drinkById.get(drinkId)||{waterFraction:1}).waterFraction)}
+                    Выбрано: <strong>{drinkSelected?.emoji} {drinkSelected?.name}</strong> — доля воды {fmtPct(drinkSelected?.waterFraction ?? 1)}
                   </div>
                 </div>
 
@@ -586,7 +499,7 @@
                 </div>
 
                 <div className="mt-3 flex items-center gap-2">
-                  <button className="px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition" onClick={handleUndo}>↩️ Отменить последний</button>
+                  <button className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition" onClick={handleUndo}>↩️ Отменить последний</button>
                 </div>
 
                 <div className="mt-4">
@@ -608,6 +521,7 @@
                 </div>
               </Card>
 
+              {/* Leaderboard */}
               <Card className="p-4">
                 <h2 className="font-semibold mb-3">Таблица лидеров — {period === "day" ? "за день" : period === "month" ? "за месяц" : "за год"}</h2>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mb-2">Рейтинг по <strong>водному эквиваленту</strong></p>
@@ -629,6 +543,7 @@
               </Card>
             </section>
 
+            {/* Feed */}
             <Card className="p-4">
               <h2 className="font-semibold mb-3">Лента записей за выбранный период</h2>
               <ul className="space-y-1 text-sm max-h-80 overflow-auto">
@@ -651,69 +566,11 @@
             </Card>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 text-center py-2">
-              Сделано на React + Tailwind. Данные — Firebase Firestore.
+              Сделано на React + Tailwind. Данные пользователей и записи — в Firebase Firestore.
             </p>
           </div>
 
-          <!-- Sticky Bottom Action Bar -->
-          <div className="fixed bottom-0 inset-x-0 z-50">
-            <div className="mx-auto max-w-6xl px-3">
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card bg-white/90 dark:bg-slate-900/90 backdrop-blur safe-bottom">
-                <div className="flex items-center gap-2 p-2 overflow-x-auto">
-                  <button className={btnAction()} onClick={()=>setShowDrinkSettings(true)} title="Напитки">⚙️</button>
-
-                  <div className="flex-1 flex gap-2 overflow-x-auto">
-                    <button className={btnActionPrimary()} onClick={()=>handleAddDrink(ML.glass)} aria-label="Добавить стакан">
-                      🥛 {fmtLiters(ML.glass)}
-                    </button>
-                    <button className={btnActionPrimary()} onClick={()=>handleAddDrink(ML.bottle05)} aria-label="Добавить 0.5 л">
-                      🧴 0.5 л
-                    </button>
-                    <button className={btnActionPrimary()} onClick={()=>handleAddDrink(ML.bottle15)} aria-label="Добавить 1.5 л">
-                      🧴 1.5 л
-                    </button>
-                    <button className={btnAction()} onClick={()=>setCustomOpen(true)} aria-label="Свой объём">
-                      ➕ Свой
-                    </button>
-                  </div>
-
-                  <button className={btnAction()} onClick={handleUndo} title="Отменить последнюю запись">↩️</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Модал: Свой объём */}
-          {customOpen && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="max-w-sm w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 shadow-card">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                  <h3 className="font-semibold text-lg">Свой объём</h3>
-                </div>
-                <div className="p-4 grid gap-3">
-                  <label className="text-sm">
-                    Миллилитры:
-                    <input type="number" inputmode="numeric" min="50" step="10"
-                      value={customMl} onChange={e=>setCustomMl(parseInt(e.target.value||0,10))}
-                      className="mt-1 w-full px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
-                  </label>
-                  <div className="flex gap-2">
-                    {[200,250,300,330,500,700,750,1000].map(v=>(
-                      <button key={v} onClick={()=>setCustomMl(v)} className="px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 text-sm">
-                        {v} мл
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <button className={btnActionPrimary()+" flex-1"} onClick={()=>{ setCustomOpen(false); handleAddDrink(customMl); }}>Добавить {fmtLiters(customMl)}</button>
-                    <button className={btnAction()+" flex-1"} onClick={()=>setCustomOpen(false)}>Отмена</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Модал: Настройки напитков */}
+          {/* Drink Settings Modal */}
           {showDrinkSettings && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
               <div className="max-w-2xl w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 shadow-card">
@@ -722,19 +579,8 @@
                   <button className="text-sm underline" onClick={()=>setShowDrinkSettings(false)}>Закрыть</button>
                 </div>
                 <div className="p-4">
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 mb-3">
-                    {drinks.map(d=>(
-                      <button key={d.id} onClick={()=>setDrinkId(d.id)}
-                        className={cx("px-3 py-2 min-h-[44px] rounded-xl border whitespace-nowrap transition",
-                          "border-slate-200 dark:border-slate-700",
-                          drinkId===d.id ? "bg-brand-500 text-white dark:text-slate-900 dark:bg-brand-300" : "bg-white/70 dark:bg-slate-800/60 hover:brightness-95"
-                        )}>
-                        <span className="mr-1">{d.emoji}</span>{d.name}
-                      </button>
-                    ))}
-                  </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">
-                    В таблице лидеров учитывается <strong>водный эквивалент</strong> (= объём × доля воды).
+                    Измени долю воды (0–100%). Рейтинг считает: водный эквивалент = объём × доля воды.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {drinks.map(d=>(
@@ -746,7 +592,7 @@
                             type="number" min="0" max="100" step="1"
                             value={Math.round((d.waterFraction ?? 1)*100)}
                             onChange={(e)=>updateDrinkFraction(d.id, (Number(e.target.value)||0)/100)}
-                            className="ml-2 w-20 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent"
+                            className="ml-2 w-20 px-2 py-1 border rounded-lg bg-transparent border-slate-200 dark:border-slate-700"
                           />%
                         </label>
                         <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -761,9 +607,6 @@
           )}
         </div>
       );
-
-      function btnAction(){ return "px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition whitespace-nowrap"; }
-      function btnActionPrimary(){ return "px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-brand-500 text-white hover:brightness-95 transition whitespace-nowrap"; }
     }
 
     function JoinForm({ onJoin, onSetName, displayName }){
@@ -773,14 +616,14 @@
           <label className="text-sm block mb-3">
             Ваше имя:
             <input value={displayName} onChange={e=>onSetName(e.target.value)} placeholder="Например, Артём"
-              className="mt-1 w-full px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
+              className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
           </label>
           <label className="text-sm block mb-3">
             ID комнаты:
             <input value={id} onChange={e=>setId(e.target.value)} placeholder="Вставьте ROOM_ID"
-              className="mt-1 w-full px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
+              className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"/>
           </label>
-          <button onClick={()=>onJoin(id)} className="px-4 py-3 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
+          <button onClick={()=>onJoin(id)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
             ⬇️ Войти в комнату
           </button>
         </div>
