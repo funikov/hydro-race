@@ -51,7 +51,6 @@
   </script>
   <style>
     html, body { height: 100%; }
-    /* iOS safe-area helpers */
     .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
     .safe-top { padding-top: calc(env(safe-area-inset-top) + 8px); }
   </style>
@@ -72,25 +71,30 @@
     };
     if (!firebase.apps || firebase.apps.length === 0) {
       firebase.initializeApp(firebaseConfig);
+      console.log("[INIT] Firebase initialized");
     }
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Сохраняем сессию ОДИН РАЗ при старте (не в обработчике клика!)
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e)=>{
-      console.warn("setPersistence failed:", e);
-      alert("setPersistence error: " + (e?.code || "") + " " + (e?.message || ""));
-    });
+    // Persist session ONCE at startup
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .then(()=> console.log("[AUTH] persistence: LOCAL"))
+      .catch((e)=>{
+        console.warn("[AUTH] setPersistence failed:", e);
+        alert("setPersistence error: " + (e?.code || "") + " — " + (e?.message || ""));
+      });
 
-    // Завершаем возможный redirect-вход (если был) + лог ошибок
+    // Handle redirect result (if any)
     auth.getRedirectResult()
       .then((res) => {
         if (res && res.user) {
-          console.log("Redirect sign-in success:", res.user.uid);
+          console.log("[AUTH] Redirect success. uid=", res.user.uid);
+        } else {
+          console.log("[AUTH] No redirect user (first load or already signed-in).");
         }
       })
       .catch((err) => {
-        console.warn("Firebase redirect error:", err);
+        console.warn("[AUTH] Redirect error:", err);
         alert("Redirect error: " + (err?.code || "") + " — " + (err?.message || ""));
       });
 
@@ -119,8 +123,6 @@
     ];
 
     function cx(...classes){ return classes.filter(Boolean).join(" "); }
-
-    // Встроенный браузер приложений? (Telegram/Instagram/Facebook/Gmail и др.)
     function isInAppBrowser() {
       const ua = navigator.userAgent || "";
       const isFB = ua.includes("FBAN") || ua.includes("FBAV") || ua.includes("FB_IAB");
@@ -133,10 +135,7 @@
       const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
       return !isStandalone && (isFB || isIG || isLine || isWeChat || isTwitter || isTelegram || isGmail);
     }
-    function openInExternalBrowser() {
-      // В IAB это зачастую откроет системный «Open in…»
-      window.location.href = window.location.href;
-    }
+    function openInExternalBrowser() { window.location.href = window.location.href; }
 
     // ====== Hooks ======
     function useTheme(){
@@ -154,13 +153,14 @@
       return { theme, setTheme };
     }
 
-    // useAuth: БЕЗ await перед popup! (важно для "user gesture")
+    // useAuth — REDIRECT ONLY + жёсткие логи
     function useAuth() {
       const [user, setUser] = React.useState(null);
       const [loading, setLoading] = React.useState(true);
 
       React.useEffect(() => {
         return auth.onAuthStateChanged((u) => {
+          console.log("[AUTH] onAuthStateChanged:", u ? u.uid : "null");
           setUser(u);
           setLoading(false);
         });
@@ -170,16 +170,18 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: "select_account" });
         try {
+          console.log("[AUTH] signInWithRedirect() call");
+          alert("GOOGLE SIGN-IN: start redirect…");
           await auth.signInWithRedirect(provider);
         } catch (err) {
-          console.warn("Redirect sign-in error:", err);
+          console.warn("[AUTH] Redirect sign-in error:", err);
           alert("Redirect sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
         }
       }
 
       function signInAnon() {
         return auth.signInAnonymously().catch((err)=>{
-          console.warn("Anon sign-in error:", err);
+          console.warn("[AUTH] Anon sign-in error:", err);
           alert("Anon sign-in error: " + (err?.code || "") + " — " + (err?.message || ""));
         });
       }
@@ -289,8 +291,8 @@
     function App(){
       const { theme, setTheme } = useTheme();
       const { user, loading, signInGoogle, signInAnon, signOut } = useAuth();
-      const { drinks, drinkById, updateDrinkFraction } = useDrinksConfig();
 
+      const { drinks, drinkById, updateDrinkFraction } = useDrinksConfig();
       const [period,setPeriod]=React.useState("day");
       const [selectedDate,setSelectedDate]=React.useState(todayISO());
       const [drinkId,setDrinkId]=React.useState("water");
@@ -330,7 +332,6 @@
 
       const drinkSelected = drinkById.get(drinkId) || drinks[0];
 
-      // derived
       const memberMap = React.useMemo(()=>{
         const m = new Map();
         members.forEach(mem => m.set(mem.id, mem));
@@ -368,7 +369,6 @@
         return entries.filter(e => e.userId === user.uid).slice(0,20);
       }, [entries, user]);
 
-      // actions
       async function handleAddDrink(ml){
         if (!user || !roomId) return;
         const name = displayName || user.displayName || "Гость";
@@ -449,11 +449,7 @@
               {inApp && (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-200 p-3">
                   Похоже, страница открыта <b>во встроенном браузере приложения</b> (например, Telegram/Instagram/Gmail).
-                  Google-вход тут часто не работает. Пожалуйста, открой в <b>обычном браузере</b>:
-                  <div className="mt-2 flex gap-2">
-                    <a href={location.href} target="_blank" rel="noopener" className="px-3 py-2 rounded-xl border">Открыть в браузере</a>
-                    <button onClick={openInExternalBrowser} className="px-3 py-2 rounded-xl border">Открыть здесь</button>
-                  </div>
+                  Google-вход тут часто не работает. Пожалуйста, открой в <b>обычном браузере</b>.
                 </div>
               )}
               <Card className="p-6 text-center">
@@ -462,12 +458,12 @@
                   Войдите, чтобы синхронизировать записи между устройствами.
                 </p>
                 <div className="grid gap-2">
-                  <button onclick="void(0)" style="display:none"></button> <!-- небольшой «разогрев» для жестов -->
-                  <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google</button>
+                  <button onClick={signInGoogle} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти через Google (redirect)</button>
+                  <a href="https://accounts.google.com" target="_self" className="px-4 py-3 rounded-xl min-h-[44px] border text-sm border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Тест редиректа на google.com</a>
                   <button onClick={signInAnon} className="px-4 py-3 rounded-xl min-h-[44px] border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">Войти анонимно</button>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
-                  Если видите бесконечный вход — откройте ссылку в Safari/Chrome, а не внутри приложения.
+                  Если не начинается переход — пришлите, пожалуйста, что пишет консоль разработчика.
                 </p>
               </Card>
             </div>
@@ -507,7 +503,6 @@
                 </div>
               </Card>
             </div>
-            <BottomBarHint />
           </div>
         );
       }
@@ -767,7 +762,6 @@
         </div>
       );
 
-      // Button styles (reuse)
       function btnAction(){ return "px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 hover:brightness-95 transition whitespace-nowrap"; }
       function btnActionPrimary(){ return "px-3 py-2 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 bg-brand-500 text-white hover:brightness-95 transition whitespace-nowrap"; }
     }
@@ -789,18 +783,6 @@
           <button onClick={()=>onJoin(id)} className="px-4 py-3 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 hover:brightness-95 transition">
             ⬇️ Войти в комнату
           </button>
-        </div>
-      );
-    }
-
-    function BottomBarHint(){
-      return (
-        <div className="fixed bottom-0 inset-x-0 pointer-events-none">
-          <div className="mx-auto max-w-6xl px-3">
-            <div className="py-1 text-center text-[10px] md:hidden text-slate-500 dark:text-slate-400">
-              Быстрые действия внизу • свайпни по кнопкам, если не помещаются →
-            </div>
-          </div>
         </div>
       );
     }
