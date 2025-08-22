@@ -222,7 +222,7 @@
   <script type="module">
     // ===== Firebase SDK (modular) =====
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import {
       getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, addDoc,
       onSnapshot, orderBy, limit, query, getDocs, deleteDoc
@@ -240,7 +240,33 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    // Настраиваем хранение состояния авторизации и обрабатываем возможный редирект
+    setPersistence(auth, browserLocalPersistence).catch(console.warn);
+    getRedirectResult(auth).catch(() => {});
     const db = getFirestore(app);
+
+    // Настраиваем тип персистентности (local → session → inMemory)
+    (async () => {
+      try { await setPersistence(auth, browserLocalPersistence); }
+      catch (e1) {
+        try { await setPersistence(auth, browserSessionPersistence); }
+        catch (e2) { await setPersistence(auth, inMemoryPersistence); }
+      }
+      try {
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult?.user) {
+          console.log('Signed in via redirect:', redirectResult.user.uid);
+        }
+      } catch (e) { console.warn('Redirect handling issue', e); }
+    })();
+
+    // Хелперы среды
+    function isMobile(){ return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent); }
+    function isStoragePartitioned(){
+      try {
+        const k='__fb_test__'; sessionStorage.setItem(k,'1'); sessionStorage.removeItem(k); return false;
+      } catch { return true; }
+    }
 
     // ===== УТИЛИТЫ ДАТЫ/КЛЮЧЕЙ =====
     const pad = (n) => String(n).padStart(2, '0');
@@ -285,7 +311,41 @@
     // ===== Авторизация =====
     signInBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      if (window.location.protocol === 'file:') {
+        alert('Для входа через Google откройте страницу по http/https (например, через Firebase Hosting). Вход через file:// не поддерживается.');
+        return;
+      }
+
+      try {
+        // Сначала пробуем popup; если окружение не поддерживает — перейдём на redirect
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        if (e && (e.code === 'auth/operation-not-supported-in-this-environment' || e.code === 'auth/popup-blocked')) {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        console.error(e);
+        alert('Ошибка входа: ' + (e && e.message ? e.message : e));
+      }
+    });
+      // В средах, где popup не работает (iOS Safari, ин‑апп браузеры), используем redirect
+      if (isMobile() || isStoragePartitioned()) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        const code = e?.code || '';
+        if (code === 'auth/operation-not-supported-in-this-environment' || code === 'auth/popup-blocked' || code === 'auth/popup-closed-by-user') {
+          await signInWithRedirect(auth, provider);
+        } else {
+          alert('Ошибка входа: ' + (e?.message || e));
+          console.error(e);
+        }
+      }
     });
     signOutBtn.addEventListener('click', async () => {
       await signOut(auth);
