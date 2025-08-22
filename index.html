@@ -5,34 +5,104 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Водная битва — ежедневное соревнование по воде</title>
   <!--
-  Что нового:
-  - Добавлен выбор напитка и пересчёт в "вода-эквивалент" (hydration factor).
-  - Лидерборд и главный счётчик теперь считают именно воду-эквивалент (но также хранится общий объём напитков).
-
-  Подготовка Firebase:
-  1) Authentication → Google (включить). Authorized domains: добавьте funikov.github.io (или свой домен).
-  2) Firestore (Production mode). Правила — из предыдущего шага (подойдут без изменений; новые поля просто добавятся).
+  Обновление интерфейса 🎨:
+  - Иконки напитков вместо выпадающего списка (красивая сетка с выбором).
+  - Современные стили карточек, кнопок и вкладок.
+  - Всё как и раньше — один index.html, Firebase + Firestore.
   -->
   <style>
-    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --brand:#22d3ee; --card:#0b1220; --good:#34d399; --shadow:0 10px 30px rgba(0,0,0,.35); --radius:16px; }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial;background:linear-gradient(180deg,#0b1020 0%,#0f172a 100%);color:var(--text)}
-    header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;background:rgba(15,23,42,.7);backdrop-filter:blur(10px);border-bottom:1px solid rgba(148,163,184,.12)}
-    .brand{display:flex;gap:10px;align-items:center}.drop{width:28px;height:28px;border-radius:8px;background:radial-gradient(circle at 30% 25%,#7dd3fc,#22d3ee 60%,#60a5fa);box-shadow:inset 0 0 10px rgba(255,255,255,.2),0 8px 18px rgba(34,211,238,.3)}
-    .title{font-weight:700}.subtitle{font-size:12px;color:var(--muted)} .row{display:flex;gap:12px;align-items:center}
-    .btn{border:0;color:#0b1020;background:var(--brand);padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:700}
-    .btn.secondary{background:transparent;color:var(--text);border:1px solid rgba(148,163,184,.3)}
-    main{max-width:1100px;margin:18px auto;padding:0 16px} .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px} @media(max-width:960px){.grid{grid-template-columns:1fr}}
-    .card{background:linear-gradient(180deg,rgba(96,165,250,.10),rgba(34,211,238,.06));border:1px solid rgba(148,163,184,.16);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
-    h2{margin:0 0 10px 0;font-size:20px} .muted{color:var(--muted)} .hidden{display:none!important} .success{color:var(--good);font-weight:700}
-    .stat{display:flex;align-items:baseline;gap:10px}.stat .big{font-size:42px;font-weight:800}
-    .chipbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 10px}.chip{border:1px dashed rgba(148,163,184,.35);background:rgba(2,6,23,.35);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer}
-    .custom-add{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    select, input[type=number]{background:#0a0f1d;color:var(--text);border:1px solid rgba(148,163,184,.28);border-radius:10px;padding:8px 10px}
-    .tabs{display:flex;gap:6px;border-bottom:1px solid rgba(148,163,184,.16);margin-bottom:10px}
-    .tab{background:transparent;color:var(--text);border:0;padding:10px 14px;cursor:pointer}.tab.active{color:var(--brand);border-bottom:2px solid var(--brand);font-weight:700}
-    .lb-list{display:grid;gap:10px}.lb-item{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;background:var(--card);border-radius:14px;padding:10px 12px;border:1px solid rgba(148,163,184,.12)}
-    .avatar{width:32px;height:32px;border-radius:50%;background:#0a0f1d;overflow:hidden}.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    :root {
+      --bg1: #090d1d; --bg2: #0f172a; --panel: rgba(17, 24, 39, .65);
+      --border: rgba(148, 163, 184, .16); --muted: #94a3b8; --text: #e5e7eb;
+      --brand: #22d3ee; --brand2: #60a5fa; --good: #34d399; --warn: #f59e0b; --danger: #f87171;
+      --card: rgba(11, 18, 32, .7); --shadow: 0 20px 40px rgba(0,0,0,.35); --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 900px at 10% -10%, #0b122a, transparent),
+                  radial-gradient(900px 700px at 120% 10%, #0a3f5d, transparent),
+                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+      color: var(--text);
+    }
+    header {
+      position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 18px; background: rgba(8,14,28,.55); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .drop { width: 30px; height: 30px; border-radius: 10px; background:
+      radial-gradient(circle at 30% 20%, #7dd3fc, transparent 35%),
+      radial-gradient(circle at 60% 60%, #22d3ee, transparent 40%),
+      radial-gradient(circle at 70% 30%, #60a5fa, transparent 45%);
+      box-shadow: inset 0 0 14px rgba(255,255,255,.25), 0 8px 22px rgba(34,211,238,.35);
+    }
+    .title { font-weight: 800; letter-spacing: .2px; }
+    .subtitle { font-size: 12px; color: var(--muted); }
+
+    .row { display: flex; gap: 12px; align-items: center; }
+    .btn {
+      border: 0; color: #06111c; background: linear-gradient(180deg, var(--brand) 0%, #1bc0d9 100%);
+      padding: 10px 16px; border-radius: 999px; cursor: pointer; font-weight: 800; letter-spacing: .3px;
+      box-shadow: 0 6px 16px rgba(34,211,238,.35);
+      transition: transform .08s ease, filter .2s ease;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:active { transform: translateY(1px); }
+    .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
+
+    main { max-width: 1100px; margin: 18px auto; padding: 0 16px; }
+    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
+    @media (max-width: 960px){ .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));
+      border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 18px; position: relative; overflow: clip;
+    }
+    .card::after {
+      content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: calc(var(--radius) + 8px);
+      background: radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),
+                  radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);
+      filter: blur(20px);
+    }
+    h2 { margin: 0 0 10px 0; font-size: 20px; }
+
+    .stat { display: flex; align-items: baseline; gap: 10px; }
+    .stat .big { font-size: 44px; font-weight: 900; letter-spacing: .3px; }
+    .unit { color: var(--muted); }
+
+    .chipbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 10px; }
+    .chip {
+      border: 1px dashed rgba(148,163,184,.35); color: var(--text); background: rgba(2,6,23,.45);
+      padding: 10px 14px; border-radius: 12px; cursor: pointer; transition: border-color .2s ease, transform .08s ease;
+    }
+    .chip:hover { border-color: rgba(148,163,184,.6); }
+    .chip:active { transform: translateY(1px); }
+
+    .custom-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    input[type=number] { width: 140px; background: #0a0f1d; color: var(--text); border: 1px solid rgba(148,163,184,.28); border-radius: 12px; padding: 10px 12px; }
+
+    .tabs { display: inline-flex; gap: 4px; background: rgba(2,6,23,.45); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+    .tab {
+      background: transparent; color: var(--text); border: 0; padding: 8px 12px; cursor: pointer; border-radius: 10px; font-weight: 700;
+      transition: background .2s ease, color .2s ease;
+    }
+    .tab.active { background: linear-gradient(180deg, rgba(34,211,238,.18), rgba(96,165,250,.12)); color: #e7fbff; }
+
+    /* Сетка иконок напитков */
+    .bev-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin: 8px 0 14px; }
+    @media (max-width: 520px){ .bev-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    .bev {
+      display: grid; place-items: center; gap: 6px; padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border);
+      background: rgba(2,6,23,.45); cursor: pointer; text-align: center; transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .bev:hover { border-color: rgba(148,163,184,.35); }
+    .bev.selected { outline: 0; border-color: rgba(34,211,238,.8); box-shadow: 0 0 0 2px rgba(34,211,238,.25) inset; }
+    .bev .icon { width: 28px; height: 28px; }
+    .bev .name { font-size: 12px; color: var(--text); }
+    .hint, .muted { color: var(--muted); font-size: 13px; }
+    .success { color: var(--good); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -41,13 +111,13 @@
       <div class="drop" aria-hidden="true"></div>
       <div>
         <div class="title">Водная битва</div>
-        <div class="subtitle">Считаем воду-эквивалент 💧</div>
+        <div class="subtitle">Выберите напиток и добавляйте объём — считаем воду-эквивалент 💧</div>
       </div>
     </div>
 
     <div class="row" id="authRow">
       <div class="row hidden" id="userInfo">
-        <div class="avatar" id="userAvatar"></div>
+        <div class="avatar" id="userAvatar" style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0a0f1d"></div>
         <div class="name" id="userName"></div>
       </div>
       <button class="btn" id="signInBtn">Войти через Google</button>
@@ -63,17 +133,14 @@
           <div class="muted" id="todayLabel"></div>
         </div>
 
-        <div class="custom-add" style="margin: 6px 0 10px;">
-          <label for="beverage" class="muted">Напиток:</label>
-          <select id="beverage"></select>
-        </div>
+        <div class="bev-grid" id="bevGrid" aria-label="Выбор напитка"></div>
+        <div class="hint" id="factorHint"></div>
 
-        <div class="stat" aria-live="polite">
+        <div class="stat" aria-live="polite" style="margin-top:6px;">
           <div class="big" id="myTotalWaterLiters">0,0</div>
           <div class="unit">л воды-экв.</div>
         </div>
         <div class="muted" id="myRawTotal" style="margin-top:4px">Всего напитков: 0,0 л</div>
-        <div class="muted" id="factorHint" style="margin-top:4px"></div>
         <div class="hint" id="lastAction" style="margin-top:6px"></div>
 
         <div class="chipbar" aria-label="Быстро добавить">
@@ -92,27 +159,29 @@
 
       <section class="card" aria-labelledby="lbTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-          <h2 id="lbTitle">Таблица лидеров (вода-эквивалент)</h2>
-          <div class="muted" id="periodLabel"></div>
+          <h2 id="lbTitle">Таблица лидеров</h2>
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
+            <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
+            <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
+          </div>
         </div>
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
-          <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
-          <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
-        </div>
+        <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
         <div class="lb-list" id="lbList" aria-live="polite"></div>
         <div class="muted" style="margin-top:6px">Рейтинг строится по воде-эквиваленту; общий объём хранится отдельно.</div>
       </section>
     </div>
   </main>
 
-  <footer>Один HTML‑файл на Firebase + Firestore. Напитки учитываются с коэффициентом гидратации (воды-экв.).</footer>
+  <footer style="max-width:1100px;margin:26px auto 60px;padding:0 16px;" class="muted">
+    Один HTML‑файл на Firebase + Firestore. Напитки учитываются с коэффициентом гидратации.
+  </footer>
 
   <template id="lbRowTpl">
     <div class="lb-item">
       <div class="muted rank"></div>
       <div class="row" style="gap:10px; overflow:hidden;">
-        <div class="avatar av"></div>
+        <div class="avatar av" style="width:32px;height:32px;border-radius:50%;overflow:hidden;background:#0a0f1d"></div>
         <div class="name nm"></div>
       </div>
       <div class="amt am"></div>
@@ -120,6 +189,7 @@
   </template>
 
   <script type="module">
+    // Firebase SDK (modular)
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
@@ -141,13 +211,23 @@
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(() => {});
 
-    // === Напитки и коэффициенты (можно легко править)
+    // === Напитки и коэффициенты + SVG иконки
+    const ICONS = {
+      water: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      tea: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      coffee: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h10a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M16 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4c0 1 .8 1.5.8 2.4S8 8 8 8M11 4c0 1 .8 1.5.8 2.4S11 8 11 8" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      milk: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 3h8l-2 3v13a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V6L8 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 11h4M10 15h4" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      cola_zero: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      kvass: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      juice: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9L6 6Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      lemonade: `<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10L5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
+    };
     const BEVERAGES = [
       { key:'water',    name:'Вода',                 factor: 1.00 },
       { key:'tea',      name:'Чай',                  factor: 0.98 },
       { key:'coffee',   name:'Кофе',                 factor: 0.90 },
       { key:'milk',     name:'Молоко',               factor: 0.87 },
-      { key:'cola_zero',name:'Кола лайт/без сахара', factor: 0.95 },
+      { key:'cola_zero',name:'Кола лайт/0 сахар',    factor: 0.95 },
       { key:'kvass',    name:'Квас',                 factor: 0.92 },
       { key:'juice',    name:'Соки',                 factor: 0.90 },
       { key:'lemonade', name:'Лимонады',             factor: 0.90 },
@@ -162,7 +242,7 @@
     const appEl = document.getElementById('app');
 
     const todayLabelEl = document.getElementById('todayLabel');
-    const beverageSel = document.getElementById('beverage');
+    const bevGrid = document.getElementById('bevGrid');
     const factorHintEl = document.getElementById('factorHint');
 
     const myTotalWaterLitersEl = document.getElementById('myTotalWaterLiters');
@@ -178,36 +258,44 @@
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
+    const pad = (n)=>String(n).padStart(2,'0');
+    const keysFor = (date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
+
     todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`;
 
-    // Заполняем селект напитков
-    BEVERAGES.forEach(b => {
-      const opt = document.createElement('option');
-      opt.value = b.key; opt.textContent = b.name + ` (×${b.factor})`;
-      beverageSel.appendChild(opt);
-    });
-    beverageSel.value = 'water';
-    updateFactorHint();
-    beverageSel.addEventListener('change', updateFactorHint);
-    function updateFactorHint(){
-      const bev = BEVERAGES.find(b => b.key === beverageSel.value);
-      factorHintEl.textContent = `Сейчас добавления умножаются на ×${bev.factor} для воды-экв.`;
+    // === Рендер сетки напитков
+    let currentBevKey = 'water';
+    function renderBeverages(){
+      bevGrid.innerHTML = '';
+      BEVERAGES.forEach(b => {
+        const div = document.createElement('button');
+        div.className = 'bev'+(b.key===currentBevKey?' selected':'');
+        div.setAttribute('type','button');
+        div.setAttribute('data-key', b.key);
+        div.innerHTML = `${ICONS[b.key] || ''}<div class="name">${b.name}</div>`;
+        div.querySelector('.icon').style.color = b.key==='water' ? '#7dd3fc' : '#cfe6ff';
+        div.addEventListener('click', () => { currentBevKey = b.key; updateFactorHint(); renderBeverages(); });
+        bevGrid.appendChild(div);
+      });
     }
+    renderBeverages();
 
-    // Авторизация
+    function updateFactorHint(){
+      const bev = BEVERAGES.find(b => b.key===currentBevKey);
+      factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`;
+    }
+    updateFactorHint();
+
+    // === Авторизация
     signInBtn.addEventListener('click', async () => {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
+      const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
       try { await signInWithPopup(auth, provider); }
       catch (e){ if (e?.code === 'auth/operation-not-supported-in-this-environment' || e?.code === 'auth/popup-blocked') { await signInWithRedirect(auth, provider); } else { alert('Ошибка входа: '+(e?.message||e)); } }
     });
     signOutBtn.addEventListener('click', async () => { await signOut(auth); });
 
-    let unsubMyDaily = null; let unsubLB = null;
+    let unsubMyDaily = null, unsubLB = null;
     const cleanupSubscriptions = () => { if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; } if (unsubLB) { unsubLB(); unsubLB=null; } };
-
-    const pad = (n)=>String(n).padStart(2,'0');
-    const keysFor = (date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -216,7 +304,7 @@
         signOutBtn.classList.remove('hidden');
         userInfoEl.classList.remove('hidden');
         userNameEl.textContent = user.displayName || user.email;
-        userAvatarEl.innerHTML = user.photoURL ? `<img src="${user.photoURL}" alt="Аватар"/>` : '';
+        userAvatarEl.innerHTML = user.photoURL ? `<img src="${user.photoURL}" alt="Аватар" width="32" height="32"/>` : '';
         await setDoc(doc(db, 'users', user.uid), { uid:user.uid, displayName:user.displayName||null, email:user.email||null, photoURL:user.photoURL||null, lastLoginAt:serverTimestamp(), createdAt:serverTimestamp() }, { merge:true });
         subscribeMyDailyTotal();
         activateTab('day');
@@ -229,7 +317,7 @@
       }
     });
 
-    // Действия
+    // === Действия
     addChips.forEach(btn => btn.addEventListener('click', () => addAmount(parseInt(btn.dataset.add, 10))));
     addCustomBtn.addEventListener('click', () => { const v = parseInt(customInput.value, 10); if (!Number.isFinite(v) || v === 0) { toast('Введите количество мл (не 0)'); return; } addAmount(v); customInput.value=''; });
     undoBtn.addEventListener('click', undoLast);
@@ -270,7 +358,7 @@
       items.forEach((it, idx) => {
         const node = tpl.content.firstElementChild.cloneNode(true);
         node.querySelector('.rank').textContent = idx+1;
-        node.querySelector('.av').innerHTML = it.photoURL ? `<img src="${it.photoURL}" alt="Аватар"/>` : '';
+        node.querySelector('.av').innerHTML = it.photoURL ? `<img src="${it.photoURL}" alt="Аватар" width="32" height="32"/>` : '';
         node.querySelector('.nm').textContent = it.displayName || 'Без имени';
         const w = Math.max(0, it.total_water_ml||0)/1000;
         node.querySelector('.am').textContent = `${w.toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л воды-экв.`;
@@ -280,7 +368,7 @@
 
     async function addAmount(ml){
       const user = auth.currentUser; if (!user) return;
-      const bev = BEVERAGES.find(b => b.key === beverageSel.value) || BEVERAGES[0];
+      const bev = BEVERAGES.find(b => b.key === currentBevKey) || BEVERAGES[0];
       const water_ml = Math.round(ml * bev.factor);
       const now = new Date();
       const { dateStr, monthStr, yearStr } = keysFor(now);
@@ -307,9 +395,10 @@
       if (!mine) { toast('Нечего отменять за сегодня'); return; }
       const data = mine.data();
       const batch = writeBatch(db);
-      batch.set(doc(db,'daily_totals',dateStr,'users',user.uid),   { total_ml: increment(-data.ml),        total_water_ml: increment(-(data.water_ml||Math.round(data.ml*(data.factor||1)))) , updatedAt:serverTimestamp() }, { merge:true });
-      batch.set(doc(db,'monthly_totals',data.monthStr,'users',user.uid),{ total_ml: increment(-data.ml),        total_water_ml: increment(-(data.water_ml||Math.round(data.ml*(data.factor||1)))), updatedAt:serverTimestamp() }, { merge:true });
-      batch.set(doc(db,'yearly_totals',data.yearStr,'users',user.uid), { total_ml: increment(-data.ml),        total_water_ml: increment(-(data.water_ml||Math.round(data.ml*(data.factor||1)))), updatedAt:serverTimestamp() }, { merge:true });
+      const wml = data.water_ml || Math.round(data.ml * (data.factor || 1));
+      batch.set(doc(db,'daily_totals',dateStr,'users',user.uid),   { total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
+      batch.set(doc(db,'monthly_totals',data.monthStr,'users',user.uid),{ total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
+      batch.set(doc(db,'yearly_totals',data.yearStr,'users',user.uid), { total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
       await batch.commit();
       toast('Последнее действие отменено');
     }
