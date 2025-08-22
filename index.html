@@ -312,27 +312,27 @@
         }, { merge: true });
 
         // Подписаться на мой дневной итог
-        subscribeMyDailyTotal();
+        window.subscribeMyDailyTotal?.();
         // Подписаться на таблицу лидеров (по умолчанию — день)
-        activateTab('day');
+        window.activateTab?.('day');
       } else {
         appEl.classList.add('hidden');
         signInBtn.classList.remove('hidden');
         signOutBtn.classList.add('hidden');
         userInfoEl.classList.add('hidden');
-        cleanupSubscriptions();
+        window.cleanupSubscriptions?.();
       }
     });
 
     // ===== ЛОГИКА ДОБАВЛЕНИЯ / ОТМЕНЫ =====
-    addChips.forEach(btn => btn.addEventListener('click', () => addAmount(parseInt(btn.dataset.add, 10))));
+    addChips.forEach(btn => btn.addEventListener('click', () => window.addAmount(parseInt(btn.dataset.add, 10))));
     addCustomBtn.addEventListener('click', () => {
       const val = parseInt(customInput.value, 10);
       if (!Number.isFinite(val) || val === 0) { toast('Введите количество мл (не 0)'); return; }
-      addAmount(val);
+      window.addAmount(val);
       customInput.value = '';
     });
-    undoBtn.addEventListener('click', undoLast);
+    undoBtn.addEventListener('click', window.undoLast);
 
     async function addAmount(ml) {
       const user = auth.currentUser; if (!user) return;
@@ -413,6 +413,7 @@
 
     function cleanupSubscriptions(){
       if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily = null; }
+    window.cleanupSubscriptions = cleanupSubscriptions;
       if (unsubLB) { unsubLB(); unsubLB = null; }
     }
 
