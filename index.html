@@ -298,6 +298,7 @@
         <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
       </section>
 
+      <!-- Ачивки — низ страницы -->
       <section class="card" id="achCard" aria-labelledby="achTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="achTitle">Ачивки</h2>
@@ -378,7 +379,7 @@
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    /* ==== ICONS (только латиница в путях) ==== */
+    /* ==== ICONS ==== */
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -450,6 +451,7 @@
 
     let compMap = Object.create(null); // key -> water_ml
 
+    /* ==== Тема ==== */
     let currentTheme = null;
     function setThemeButtons(theme){
       themeClassicBtn.classList.toggle('active', theme==='classic');
@@ -477,9 +479,12 @@
       }
     }
 
+    /* ==== Даты/подсказки ==== */
     const pad=(n)=>String(n).padStart(2,'0');
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
+    todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'})}`;
 
+    /* ==== Кольцевой прогресс ==== */
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
     function updateProgressUI(water_ml){
       const goal = Math.max(0, currentGoalMl || 0);
@@ -491,6 +496,7 @@
       goalCurrent.textContent = `${curL} л`; goalSub.textContent = `из ${goalL} л • ${pct}%`;
     }
 
+    /* ==== Напитки ==== */
     let currentBevKey = 'water';
     function renderBeverages(){
       bevGrid.innerHTML = '';
@@ -506,7 +512,7 @@
     }
     function updateFactorHint(){ const bev = BEVERAGES.find(b=>b.key===currentBevKey); factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`; }
 
-    todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'})}`;
+    /* ==== Аутентификация ==== */
     applyTheme((()=>{ try{ return localStorage.getItem('theme'); }catch{return null;}})() || 'classic', 'local');
     themeClassicBtn.addEventListener('click', ()=>applyTheme('classic'));
     themeGroovyBtn.addEventListener('click', ()=>applyTheme('groovy'));
@@ -519,7 +525,6 @@
     signOutBtn.addEventListener('click', async ()=>{ await signOut(auth); });
 
     let unsubMyDaily=null, unsubLB=null, unsubUserDoc=null, unsubAch=null, unsubIntakes=null;
-
     const cleanupSubscriptions=()=>{
       if (unsubMyDaily){unsubMyDaily();unsubMyDaily=null}
       if (unsubLB){unsubLB();unsubLB=null}
@@ -560,11 +565,11 @@
       }
     });
 
+    /* ==== Таб-лидерборд ==== */
     tabs.forEach(tab => {
       tab.addEventListener('click', () => activateTab(tab.dataset.scope));
       tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); } });
     });
-
     function activateTab(scope){
       tabs.forEach(t=>{ const a=t.dataset.scope===scope; t.classList.toggle('active',a); t.setAttribute('aria-selected',a?'true':'false'); });
       if (unsubLB){unsubLB();unsubLB=null;}
@@ -590,10 +595,12 @@
       });
     }
 
+    /* ==== Брызги ==== */
     const splashLayer = document.getElementById('splashLayer');
     function splashAt(x,y,opts={}){ const count = opts.count || 14; for(let i=0;i<count;i++){ const p=document.createElement('div'); p.className='splash-particle'; const angle=Math.random()*Math.PI*2; const dist=40+Math.random()*70; const dx=Math.cos(angle)*dist; const dy=Math.sin(angle)*dist-10; const size=6+Math.random()*8; p.style.setProperty('--dx',dx+'px'); p.style.setProperty('--dy',dy+'px'); p.style.width=size+'px'; p.style.height=size+'px'; p.style.left=(x-size/2)+'px'; p.style.top=(y-size/2)+'px'; if (opts.neg){ p.style.background='radial-gradient(circle at 30% 30%, #fca5a5, #f87171 60%)'; p.style.filter='drop-shadow(0 6px 16px rgba(248,113,113,.25))'; } splashLayer.appendChild(p); p.addEventListener('animationend',()=>p.remove()); } const r=document.createElement('div'); r.className='splash-ripple'; r.style.left=x+'px'; r.style.top=y+'px'; if (opts.neg){ r.style.borderColor='rgba(248,113,113,.7)'; } splashLayer.appendChild(r); r.addEventListener('animationend',()=>r.remove()); }
     function splashNearTotal(neg){ const el=document.getElementById('myTotalWaterLiters'); const rect=el.getBoundingClientRect(); splashAt(rect.left+rect.width/2, rect.top+rect.height/2, {neg:!!neg, count:10}); }
 
+    /* ==== Добавления ==== */
     addChips.forEach(btn=>btn.addEventListener('click',(e)=>{const ml=parseInt(btn.dataset.add,10); addAmount(ml); if(e && e.clientX!=null){ splashAt(e.clientX,e.clientY,{neg:ml<0}); }}));
     addCustomBtn.addEventListener('click', ()=>{ const v=parseInt(customInput.value,10); if (!Number.isFinite(v) || v===0){ toast('Введите количество мл (не 0)'); return; } addAmount(v); customInput.value=''; const r = addCustomBtn.getBoundingClientRect(); splashAt(r.left+r.width/2, r.top+r.height/2, {neg:v<0}); });
     undoBtn.addEventListener('click', undoLast);
@@ -634,6 +641,7 @@
       toast('Последнее действие отменено');
     }
 
+    /* ==== График по часам ==== */
     const hourChart = document.getElementById('hourChart');
     const hourEmpty = document.getElementById('hourEmpty');
     const yTicksEl  = document.getElementById('yTicks');
@@ -683,7 +691,6 @@
     }
 
     /* ====== Ачивки ====== */
-
     const ACH_DEFS = [
       // Базовые
       { id:'first_liter', name:'Первый литр', desc:'1 л за день' },
@@ -805,6 +812,7 @@
       });
     }
 
+    // Защита от дублей в одну сессию
     const emittedAchDocIds = new Set();
     async function recordAchievement(id,payload={}){
       const uid=auth.currentUser?.uid; if (!uid) return;
@@ -816,43 +824,19 @@
       await setDoc(doc(db,'users',uid,'achievements',docId), { id, daily:isDaily, dateStr: ds, unlockedAt: serverTimestamp(), ...payload }, { merge:true });
     }
 
+    /* ==== Вспомогалки ==== */
     function ymdShift(date,delta){ const dt=new Date(date); dt.setDate(dt.getDate()+delta); const y=dt.getFullYear(); const m=('0'+(dt.getMonth()+1)).slice(-2); const d=('0'+dt.getDate()).slice(-2); return `${y}-${m}-${d}`; }
     function startOfWeek(d){ const dt=new Date(d); const day=(dt.getDay()+6)%7; dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-day); return dt; }
     function onSnapshotOnce(ref){ return new Promise((resolve)=>{ const unsub=onSnapshot(ref,(snap)=>{ resolve(snap); unsub(); },{includeMetadataChanges:false}); }); }
-
-    async function fetchDailyWater(uid, dateStr){
-      const ds = await getDoc(doc(db,'daily_totals', dateStr, 'users', uid));
-      if (!ds.exists()) return 0;
-      const x = ds.data(); return Math.max(0, x.total_water_ml||0);
-    }
-    async function countWeekGoals(uid, when, goal){
-      const start = startOfWeek(when);
-      let hits=0;
-      for (let i=0;i<7;i++){
-        const d = new Date(start); d.setDate(d.getDate()+i);
-        const ds = keysFor(d).dateStr;
-        const w = await fetchDailyWater(uid, ds);
-        if (w >= goal) hits++;
-      }
-      return hits;
-    }
-    async function countMonthGoalHits(uid, date, goal){
-      const year = date.getFullYear(); const month = date.getMonth();
-      const rows = await fetchMonthRowsSafe(uid, year, month);
-      return rows.reduce((acc,r)=> acc + ((r.total_water_ml||0) >= goal ? 1 : 0), 0);
-    }
-    async function lifetimeTotalWater(uid){
-      const cg = await getDocs(query(collectionGroup(db,'users'), where('uid','==',uid)));
-      let sum = 0;
-      cg.forEach(d=>{
-        const x=d.data();
-        if (x.yearStr && typeof x.total_water_ml === 'number') sum += Math.max(0, x.total_water_ml);
-      });
-      return sum;
-    }
-
+    async function fetchDailyWater(uid, dateStr){ const ds = await getDoc(doc(db,'daily_totals', dateStr, 'users', uid)); if (!ds.exists()) return 0; const x = ds.data(); return Math.max(0, x.total_water_ml||0); }
+    async function countWeekGoals(uid, when, goal){ const start = startOfWeek(when); let hits=0; for (let i=0;i<7;i++){ const d = new Date(start); d.setDate(d.getDate()+i); const ds = keysFor(d).dateStr; const w = await fetchDailyWater(uid, ds); if (w >= goal) hits++; } return hits; }
+    async function countMonthGoalHits(uid, date, goal){ const year = date.getFullYear(); const month = date.getMonth(); const rows = await fetchMonthRowsSafe(uid, year, month); return rows.reduce((acc,r)=> acc + ((r.total_water_ml||0) >= goal ? 1 : 0), 0); }
+    async function lifetimeTotalWater(uid){ const cg = await getDocs(query(collectionGroup(db,'users'), where('uid','==',uid))); let sum = 0; cg.forEach(d=>{ const x=d.data(); if (x.yearStr && typeof x.total_water_ml === 'number') sum += Math.max(0, x.total_water_ml); }); return sum; }
     function toast(msg){ lastActionEl.textContent = msg; lastActionEl.classList.add('success'); setTimeout(()=>{ lastActionEl.textContent=''; lastActionEl.classList.remove('success'); }, 2500); }
+    function liters(n_ml){ return (n_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}); }
+    function goalPct(w, goalMl){ if (!goalMl) return '—'; return Math.round((w/goalMl)*100)+'%'; }
 
+    /* ==== Мой дневной итог ==== */
     let lastWaterMl = 0;
     function subscribeMyDailyTotal(){
       if (unsubMyDaily) unsubMyDaily();
@@ -870,9 +854,7 @@
       });
     }
 
-    function liters(n_ml){ return (n_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}); }
-    function goalPct(w, goalMl){ if (!goalMl) return '—'; return Math.round((w/goalMl)*100)+'%'; }
-
+    /* ==== Месячная таблица ==== */
     async function fetchMonthRowsSafe(uid, year, monthIndex){
       const monthStr = year + '-' + String(monthIndex+1).padStart(2,'0');
       const daysInMonth = new Date(year, monthIndex+1, 0).getDate();
@@ -942,6 +924,7 @@
     document.getElementById('monthCloseBtn').addEventListener('click', ()=>{ document.getElementById('monthModal').style.display='none'; });
     document.getElementById('monthModal').addEventListener('click', (e)=>{ if (e.target === document.getElementById('monthModal')) document.getElementById('monthModal').style.display='none'; });
 
+    /* ==== Пончик ==== */
     const PALETTE = ['#00ffd1','#7df9ff','#ff6ad5','#ffd166','#a78bfa','#ff8fab','#8aff80','#f5a3ff'];
 
     function drawDonut(){
@@ -963,9 +946,9 @@
 
       const cx = W/2, cy = H/2, R = 100, r = 66;
       if (total <= 0){
-        const ctx2 = ctx; ctx2.globalAlpha = .18;
-        ctx2.beginPath(); ctx2.arc(cx,cy,R,0,Math.PI*2); ctx2.arc(cx,cy,r,Math.PI*2,0,true);
-        ctx2.closePath(); ctx2.fillStyle = '#ffffff22'; ctx2.fill(); ctx2.globalAlpha = 1;
+        ctx.globalAlpha = .18;
+        ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.arc(cx,cy,r,Math.PI*2,0,true);
+        ctx.closePath(); ctx.fillStyle = '#ffffff22'; ctx.fill(); ctx.globalAlpha = 1;
         syncHeights(); return;
       }
 
@@ -992,21 +975,20 @@
       syncHeights();
     }
 
-    const insightsCard = document.getElementById('insightsCard');
-    const donutCard = document.getElementById('donutCard');
+    /* ==== Синхронизация высот карточек (Аналитика ↔ Пончик) ==== */
     function syncHeights(){
       const desktop = window.matchMedia('(min-width: 961px)').matches;
       if (!desktop){ insightsCard.style.height=''; return; }
       requestAnimationFrame(()=>{ insightsCard.style.height = donutCard.offsetHeight + 'px'; });
     }
-    window.addEventListener('resize', ()=>syncHeights());
+    window.addEventListener('resize', syncHeights);
     if ('ResizeObserver' in window){
-      const ro = new ResizeObserver(()=>syncHeights());
-      ro.observe(donutCard); ro.observe(insightsCard);
+      const ro = new ResizeObserver(syncHeights);
+      ro.observe(donutCard); 
+      ro.observe(insightsCard);
     }
-    renderBeverages(); updateFactorHint(); requestAnimationFrame(()=>{ syncHeights(); });
 
-    // ====== СЕГОДНЯШНИЕ ПРИЁМЫ ======
+    /* ==== Сегодняшние приёмы ==== */
     let todayIntakes = [];
     function subscribeIntakesToday(){
       if (unsubIntakes) unsubIntakes();
@@ -1034,7 +1016,7 @@
       });
     }
 
-    // ====== Ачивки / streaks / долгосрочные ======
+    /* ==== Проверка ачивок / стриков ==== */
     async function checkStreakAndAchievements(todayWater, intakes = []){
       const user=auth.currentUser; if(!user) return;
       const userRef = doc(db,'users',user.uid);
@@ -1106,8 +1088,24 @@
       if (life >= 1000*1000) await recordAchievement('lifetime_1000l',{ total_ml: life });
     }
 
-    // первичная отрисовка
-    renderBeverages(); updateFactorHint(); drawDonut(); renderHourChart();
+    /* ==== Цель ==== */
+    saveGoalBtn.addEventListener('click', async ()=>{
+      const user = auth.currentUser; if (!user) return;
+      const liters = parseFloat(goalInput.value);
+      if (!Number.isFinite(liters)){ alert('Введите цель в литрах'); return; }
+      const clamped = Math.min(10, Math.max(0.5, liters));
+      const ml = Math.round(clamped*1000);
+      await setDoc(doc(db,'users', user.uid), { daily_goal_ml: ml }, { merge:true });
+      currentGoalMl = ml; updateProgressUI(lastWaterMl);
+      toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
+    });
+
+    /* ==== Первичная отрисовка ==== */
+    renderBeverages();
+    updateFactorHint();
+    renderHourChart();
+    drawDonut();
+    requestAnimationFrame(syncHeights);
   </script>
 </body>
 </html>
