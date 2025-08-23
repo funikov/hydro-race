@@ -60,6 +60,26 @@
     .splash-ripple{position:absolute;width:12px;height:12px;border:2px solid rgba(34,211,238,.7);border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:.9;animation:ripple 650ms ease-out forwards}
     @keyframes splash{0%{transform:translate(0,0) scale(.85);opacity:.95}80%{opacity:1}100%{transform:translate(var(--dx), var(--dy)) scale(.2);opacity:0}}
     @keyframes ripple{to{transform:translate(-50%,-50%) scale(4.2);opacity:0}}
+      /* График по часам */
+    .hour-chart{display:flex;gap:4px;align-items:flex-end;height:140px;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
+    .hour-bar{flex:1;min-width:0;height:6px;border-radius:6px 6px 0 0;background:linear-gradient(180deg, rgba(34,211,238,.8), rgba(96,165,250,.6));transition:height .35s ease}
+    .hour-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+    /* Ачивки */
+    .ach-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
+    @media(max-width:520px){.ach-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
+    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
+    .ach.locked{opacity:.6;filter:grayscale(0.4)}
+      /* График по часам */
+    .hour-chart{display:flex;gap:4px;align-items:flex-end;height:140px;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
+    .hour-bar{flex:1;min-width:0;height:6px;border-radius:6px 6px 0 0;background:linear-gradient(180deg, rgba(34,211,238,.8), rgba(96,165,250,.6));transition:height .35s ease}
+    .hour-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
+    /* Ачивки */
+    .ach-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
+    @media(max-width:520px){.ach-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
+    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
+    .ach.locked{opacity:.6;filter:grayscale(0.4)}
   </style>
 </head>
 <body>
@@ -126,7 +146,14 @@
           <button class="chip" data-add="1500">+ бутылка 1,5 л</button>
         </div>
 
-        <div class="custom-add">
+        <div class=\"muted\" style=\"margin-top:10px\">Гидратация по часам (сегодня)</div>
+        <div id=\"hourChart\" class=\"hour-chart\"></div>
+        <div class=\"hour-axis\"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+
+        <div class=\"muted\" style=\"margin-top:12px\">Ачивки</div>
+        <div id=\"achievements\" class=\"ach-grid\"></div>
+
+        <div class=\"custom-add\">
           <input id="customInput" type="number" min="1" step="1" placeholder="Другое, мл" />
           <button class="btn" id="addCustomBtn">Добавить</button>
           <button class="btn secondary" id="undoBtn" title="Отменить последнее">Отменить</button>
@@ -171,7 +198,7 @@
     // Firebase SDK (modular)
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     // === Конфиг Firebase (твой)
     const firebaseConfig = {
@@ -237,6 +264,34 @@
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
+    // График по часам
+    const hourChart = document.getElementById('hourChart');
+    let hourData = new Array(24).fill(0);
+
+    // Ачивки
+    const achGrid = document.getElementById('achievements');
+    const ACH_DEFS = [
+      { id:'first_liter', name:'Первый литр', desc:'1 л за день', icon:'💧' },
+      { id:'goal_today', name:'Цель достигнута', desc:'Выполнить дневную цель', icon:'🎯' },
+      { id:'streak_3', name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
+      { id:'streak_7', name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
+    ];
+    let unlocked = new Set();
+
+    // График
+    const hourChart = document.getElementById('hourChart');
+    let hourData = new Array(24).fill(0);
+
+    // Ачивки
+    const achGrid = document.getElementById('achievements');
+    const ACH_DEFS = [
+      { id:'first_liter', name:'Первый литр', desc:'1 л за день', icon:'💧' },
+      { id:'goal_today', name:'Цель достигнута', desc:'Выполнить дневную цель', icon:'🎯' },
+      { id:'streak_3', name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
+      { id:'streak_7', name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
+    ];
+    let unlocked = new Set();
+
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
     const goalPercent = document.getElementById('goalPercent');
@@ -294,7 +349,15 @@
     signOutBtn.addEventListener('click', async () => { await signOut(auth); });
 
     let unsubMyDaily = null, unsubLB = null, unsubUserDoc = null;
-    const cleanupSubscriptions = () => { if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; } if (unsubLB) { unsubLB(); unsubLB=null; } if (unsubUserDoc){ unsubUserDoc(); unsubUserDoc=null; } };
+    let unsubAch = null, unsubIntakes = null;
+    let unsubAch = null, unsubIntakes = null;
+    const cleanupSubscriptions = () => {
+      if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; }
+      if (unsubLB) { unsubLB(); unsubLB=null; }
+      if (unsubUserDoc){ unsubUserDoc(); unsubUserDoc=null; }
+      if (unsubAch){ unsubAch(); unsubAch=null; }
+      if (unsubIntakes){ unsubIntakes(); unsubIntakes=null; }
+    };
 
     let currentGoalMl = 3000; // по умолчанию 3.0 л
     const CIRC = 2 * Math.PI * 52; // длина окружности для r=52 (~326.7)
@@ -344,6 +407,8 @@
         });
 
         subscribeMyDailyTotal();
+        subscribeIntakesToday();
+        subscribeAchievements();
         activateTab('day');
       } else {
         appEl.classList.add('hidden');
@@ -376,16 +441,18 @@
     let lastWaterMl = 0;
     function subscribeMyDailyTotal(){
       if (unsubMyDaily) unsubMyDaily();
-      const { dateStr } = keysFor(new Date());
+      const now = new Date();
+      const { dateStr } = keysFor(now);
       const uid = auth.currentUser?.uid; if (!uid) return;
       const ref = doc(db, 'daily_totals', dateStr, 'users', uid);
-      unsubMyDaily = onSnapshot(ref, (snap) => {
+      unsubMyDaily = onSnapshot(ref, async (snap) => {
         const d = snap.exists() ? snap.data() : { total_water_ml:0, total_ml:0 };
         const water = d.total_water_ml || 0; const raw = d.total_ml || 0;
         lastWaterMl = water;
         myTotalWaterLitersEl.textContent = (water/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
         myRawTotalEl.textContent = `Всего напитков: ${(raw/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`;
         updateProgressUI(water);
+        await checkStreakAndAchievements(water);
       });
     }
 
@@ -461,6 +528,99 @@
       toast(`Добавлено: ${ml>0?'+':''}${ml} мл (${bev.name} → ${water_ml} мл воды-экв.)`);
     }
 
+    // === Подписка на сегодняшние напитки (для графика по часам)
+    function subscribeIntakesToday(){
+      if (unsubIntakes) unsubIntakes();
+      const { dateStr } = keysFor(new Date());
+      const uid = auth.currentUser?.uid; if (!uid) return;
+      const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
+      unsubIntakes = onSnapshot(qy, (qs) => {
+        hourData = new Array(24).fill(0);
+        qs.forEach(docu => {
+          const it = docu.data();
+          const ts = it.ts?.toDate ? it.ts.toDate() : new Date();
+          const h = (ts instanceof Date) ? ts.getHours() : 0;
+          const wml = it.water_ml || Math.round((it.ml||0) * (it.factor||1));
+          if (h>=0 && h<24) hourData[h] += Math.max(0, wml);
+        });
+        renderHourChart();
+      });
+    }
+
+    function renderHourChart(){
+      hourChart.innerHTML = '';
+      const max = Math.max(1, ...hourData);
+      for(let i=0;i<24;i++){
+        const bar = document.createElement('div');
+        bar.className = 'hour-bar';
+        const ratio = hourData[i] / max; // 0..1
+        bar.style.height = Math.max(6, Math.round(120 * ratio)) + 'px';
+        hourChart.appendChild(bar);
+      }
+    }
+
+    // === Ачивки ===
+    function renderAchievements(){
+      achGrid.innerHTML = '';
+      ACH_DEFS.forEach(a => {
+        const unlockedNow = unlocked.has(a.id);
+        const el = document.createElement('div'); el.className = 'ach' + (unlockedNow ? '' : ' locked');
+        el.innerHTML = `<div class="badge">${a.icon}</div><div style="font-size:12px;font-weight:700;">${a.name}</div><div class="muted" style="font-size:11px;text-align:center">${a.desc}</div>`;
+        achGrid.appendChild(el);
+      });
+    }
+
+    function subscribeAchievements(){
+      if (unsubAch) unsubAch();
+      const uid = auth.currentUser?.uid; if (!uid) return;
+      const col = collection(db, 'users', uid, 'achievements');
+      unsubAch = onSnapshot(col, (qs) => {
+        unlocked = new Set(qs.docs.map(d => d.id));
+        renderAchievements();
+      });
+    }
+
+    async function recordAchievement(id, payload={}){
+      const uid = auth.currentUser?.uid; if (!uid || unlocked.has(id)) return;
+      await setDoc(doc(db, 'users', uid, 'achievements', id), { id, unlockedAt: serverTimestamp(), ...payload }, { merge: true });
+    }
+
+    function ymdShift(date, delta){ const dt = new Date(date); dt.setDate(dt.getDate()+delta); const y=dt.getFullYear(); const m=('0'+(dt.getMonth()+1)).slice(-2); const d=('0'+dt.getDate()).slice(-2); return `${y}-${m}-${d}`; }
+
+    async function checkStreakAndAchievements(todayWater){
+      const user = auth.currentUser; if (!user) return;
+      const userRef = doc(db, 'users', user.uid);
+      const uSnap = await onSnapshotOnce(userRef);
+      const u = uSnap.data() || {};
+      const goal = typeof u.daily_goal_ml === 'number' ? u.daily_goal_ml : 3000;
+      const todayStr = keysFor(new Date()).dateStr;
+      const yesterdayStr = ymdShift(new Date(), -1);
+
+      // Пороговые ачивки за сегодня
+      if (todayWater >= 1000) await recordAchievement('first_liter', { dateStr: todayStr });
+      if (todayWater >= goal)  await recordAchievement('goal_today',  { dateStr: todayStr, goal_ml: goal });
+
+      // Серии: инкрементировать один раз в день при достижении цели
+      if (todayWater >= goal) {
+        const lastDone = u.streak_last_completed_dateStr;
+        if (lastDone !== todayStr) {
+          const current = (lastDone === yesterdayStr) ? (u.streak_current||0)+1 : 1;
+          const best = Math.max(u.streak_best||0, current);
+          await setDoc(userRef, { streak_current: current, streak_best: best, streak_last_completed_dateStr: todayStr }, { merge: true });
+          if (current >= 3) await recordAchievement('streak_3', { dateStr: todayStr, streak: current });
+          if (current >= 7) await recordAchievement('streak_7', { dateStr: todayStr, streak: current });
+        }
+      }
+    }
+
+    // helper: одноразовое чтение через onSnapshot (без getDoc импорта)
+    function onSnapshotOnce(ref){
+      return new Promise((resolve) => {
+        const unsub = onSnapshot(ref, (snap) => { resolve(snap); unsub(); }, { includeMetadataChanges:false });
+      });
+    }
+
+    
     async function undoLast(){
       const user = auth.currentUser; if (!user) return;
       const { dateStr } = keysFor(new Date());
