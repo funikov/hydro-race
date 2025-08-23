@@ -253,9 +253,7 @@
               <th>Доля воды</th>
             </tr>
           </thead>
-          <tbody id="monthTableBody">
-            <!-- rows -->
-          </tbody>
+          <tbody id="monthTableBody"></tbody>
           <tfoot>
             <tr class="tfoot">
               <td>Итого</td>
@@ -274,11 +272,11 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    // Firebase config
+    // === Firebase config (исходный, без трюков)
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWм8з2H_lhzfCj6lscQxUY".replace('м','m'), // защита от автокоррекции
+      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -286,14 +284,14 @@
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
 
-    // Init
+    // === Init
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    // Icons + beverages
+    // === Icons + beverages
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -348,11 +346,12 @@
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
 
-    const monthModal = document.getElementById('monthModal');
-    const monthCloseBtn = document.getElementById('monthCloseBtn');
-    const monthTitle = document.getElementById('monthTitle');
-    const monthSubTitle = document.getElementById('monthSubTitle');
-    const monthTableBody = document.getElementById('monthTableBody');
+    // Month modal
+    const monthModal      = document.getElementById('monthModal');
+    const monthCloseBtn   = document.getElementById('monthCloseBtn');
+    const monthTitle      = document.getElementById('monthTitle');
+    const monthSubTitle   = document.getElementById('monthSubTitle');
+    const monthTableBody  = document.getElementById('monthTableBody');
     const openMonthDailyBtn = document.getElementById('openMonthDailyBtn');
     const sumWaterEl = document.getElementById('sumWater');
     const sumTotalEl = document.getElementById('sumTotal');
@@ -396,8 +395,8 @@
           const d = snap.data() || {};
           if (typeof d.daily_goal_ml !== 'number'){ await setDoc(userRef, { daily_goal_ml: 3000 }, { merge:true }); currentGoalMl = 3000; }
           else { currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml))); }
-          updateProgressUI(lastWaterMl);
           goalInput.value = (currentGoalMl/1000).toFixed(1);
+          updateProgressUI(lastWaterMl);
         });
 
         subscribeMyDailyTotal();
@@ -411,6 +410,17 @@
         cleanupSubscriptions();
       }
     });
+
+    // tabs click handlers (на всякий)
+    if (!window.__tabsBound) {
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
+        tab.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
+        });
+      });
+      window.__tabsBound = true;
+    }
 
     saveGoalBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
@@ -555,7 +565,7 @@
         yTicksEl.innerHTML = ticks.map(v=>`<div class="tick">${v}</div>`).join('');
       }
       if (hourChart) {
-        const inner = 120; // высота области столбиков (140 - padding*2)
+        const inner = 120;
         const grid = document.createElement('div'); grid.className = 'hgrid';
         for (let v = 0; v <= niceMax; v += step) {
           const y = inner - Math.round((v/(niceMax||1)) * inner);
@@ -628,37 +638,58 @@
     function liters(n_ml){ return (n_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}); }
     function share(w,t){ if (!t) return '—'; return Math.round((w/t)*100)+'%'; }
 
+    async function fetchMonthRowsSafe(uid, year, monthIndex){
+      // подготовим пустые строки
+      const monthStr = year + '-' + String(monthIndex+1).padStart(2,'0');
+      const daysInMonth = new Date(year, monthIndex+1, 0).getDate();
+      const rows = Array.from({length:daysInMonth}, (_,i)=>({
+        day:i+1, dateStr: `${monthStr}-${String(i+1).padStart(2,'0')}`, total_water_ml:0, total_ml:0
+      }));
+
+      // 1) пытаемся быстрым путём (collectionGroup) — может спросить индекс
+      try{
+        const startStr = `${monthStr}-01`;
+        const endStr   = `${monthStr}-31`;
+        const cg = query(
+          collectionGroup(db, 'users'),
+          where('uid','==', uid),
+          where('dateStr','>=', startStr),
+          where('dateStr','<=', endStr),
+          orderBy('dateStr','asc')
+        );
+        const snap = await getDocs(cg);
+        snap.forEach(d=>{
+          const x = d.data();
+          const ds = x.dateStr;
+          const idx = parseInt(ds.slice(-2), 10) - 1;
+          if (idx>=0 && idx<rows.length){
+            rows[idx].total_water_ml = Math.max(0, x.total_water_ml||0);
+            rows[idx].total_ml = Math.max(0, x.total_ml||0);
+          }
+        });
+        return rows;
+      } catch(err){
+        // 2) фолбэк: по одному doc на день (до 31 запросов)
+        const promises = rows.map(async (r)=>{
+          const ref = doc(db,'daily_totals', r.dateStr, 'users', uid);
+          const ds  = await getDoc(ref);
+          if (ds.exists()){
+            const x = ds.data();
+            r.total_water_ml = Math.max(0, x.total_water_ml||0);
+            r.total_ml       = Math.max(0, x.total_ml||0);
+          }
+          return r;
+        });
+        return Promise.all(promises);
+      }
+    }
+
     openMonthDailyBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
       const now = new Date();
-      const year = now.getFullYear(); const monthIndex = now.getMonth();
-      const monthStr = year + '-' + String(monthIndex+1).padStart(2,'0');
-      const startStr = monthStr + '-01';
-      const endStr   = monthStr + '-31';
-      const daysInMonth = new Date(year, monthIndex+1, 0).getDate();
-      const rows = Array.from({length:daysInMonth}, (_,i)=>({ day:i+1, dateStr: `${monthStr}-${String(i+1).padStart(2,'0')}`, total_water_ml:0, total_ml:0 }));
+      const rows = await fetchMonthRowsSafe(user.uid, now.getFullYear(), now.getMonth());
 
-      // query across all daily_totals/<dateStr>/users using collectionGroup
-      const cg = query(
-        collectionGroup(db, 'users'),
-        where('uid','==', user.uid),
-        where('dateStr','>=', startStr),
-        where('dateStr','<=', endStr),
-        orderBy('dateStr','asc')
-      );
-      const snap = await getDocs(cg);
-      snap.forEach(d=>{
-        const x = d.data();
-        const ds = x.dateStr;
-        const idx = parseInt(ds.slice(-2), 10) - 1;
-        if (idx>=0 && idx<rows.length){
-          rows[idx].total_water_ml = Math.max(0, x.total_water_ml||0);
-          rows[idx].total_ml = Math.max(0, x.total_ml||0);
-        }
-      });
-
-      // Render table
-      let sumW=0,sumT=0;
+      let sumW=0, sumT=0;
       monthTableBody.innerHTML = rows.map(r=>{
         sumW += r.total_water_ml; sumT += r.total_ml;
         return `<tr>
@@ -673,23 +704,12 @@
       sumShareEl.textContent = share(sumW,sumT);
 
       monthTitle.textContent = 'Месяц по дням';
-      monthSubTitle.textContent = new Date(year, monthIndex, 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+      monthSubTitle.textContent = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
       monthModal.style.display = 'flex';
     });
 
     monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
     monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
-
-    // Включаем переключение периода лидерборда
-    if (!window.__tabsBound) {
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
-        tab.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
-        });
-      });
-      window.__tabsBound = true;
-    }
   </script>
 </body>
 </html>
