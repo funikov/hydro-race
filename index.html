@@ -93,6 +93,14 @@
     .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
     .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
     .ach.locked{opacity:.6;filter:grayscale(0.4)}
+
+    /* Модалка таблицы месяца */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10000}
+    .modal{width:min(880px,92vw);max-height:80vh;overflow:auto;background:#0b1220;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16);text-align:right}
+    .table th:first-child,.table td:first-child{text-align:left}
+    .tfoot td{font-weight:800}
   </style>
 </head>
 <body>
@@ -187,7 +195,10 @@
       <section class="card" aria-labelledby="insightsTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="insightsTitle">Аналитика сегодня</h2>
-          <div class="muted">по воде-эквиваленту</div>
+          <div class="row" style="gap:8px;">
+            <div class="muted">по воде-эквиваленту</div>
+            <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
+          </div>
         </div>
 
         <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
@@ -222,16 +233,52 @@
     </div>
   </template>
 
+  <!-- МОДАЛЬНОЕ ОКНО "ДНИ МЕСЯЦА" -->
+  <div id="monthModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="monthTitle">
+    <div class="modal">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div id="monthTitle" style="font-weight:800;font-size:18px">Месяц по дням</div>
+          <div class="muted" id="monthSubTitle"></div>
+        </div>
+        <button class="btn secondary" id="monthCloseBtn">Закрыть</button>
+      </div>
+      <div style="overflow:auto;">
+        <table class="table" id="monthTable">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Вода-экв., л</th>
+              <th>Всего, л</th>
+              <th>Доля воды</th>
+            </tr>
+          </thead>
+          <tbody id="monthTableBody">
+            <!-- rows -->
+          </tbody>
+          <tfoot>
+            <tr class="tfoot">
+              <td>Итого</td>
+              <td id="sumWater">0</td>
+              <td id="sumTotal">0</td>
+              <td id="sumShare">—</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div id="splashLayer"></div>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWм8з2H_lhzfCj6lscQxUY".replace('м','m'), // защита от автокоррекции
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -293,18 +340,6 @@
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
-        // Включаем переключение периода лидерборда
-    if (!window.__tabsBound) {
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
-        // доступно с клавиатуры
-        tab.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
-        });
-      });
-      window.__tabsBound = true; // чтобы не навешивать повторно при смене auth state
-    }
-
     // Progress
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
@@ -312,6 +347,16 @@
     const goalInput   = document.getElementById('goalInput');
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
+
+    const monthModal = document.getElementById('monthModal');
+    const monthCloseBtn = document.getElementById('monthCloseBtn');
+    const monthTitle = document.getElementById('monthTitle');
+    const monthSubTitle = document.getElementById('monthSubTitle');
+    const monthTableBody = document.getElementById('monthTableBody');
+    const openMonthDailyBtn = document.getElementById('openMonthDailyBtn');
+    const sumWaterEl = document.getElementById('sumWater');
+    const sumTotalEl = document.getElementById('sumTotal');
+    const sumShareEl = document.getElementById('sumShare');
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
     function fitGoalText(){ const wrap = document.querySelector('.progress .inside'); if (!wrap || !goalNumbers) return; goalNumbers.style.transform = 'scale(1)'; const maxW = Math.max(10, wrap.clientWidth - 12); const w = goalNumbers.scrollWidth; goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`; }
@@ -351,8 +396,8 @@
           const d = snap.data() || {};
           if (typeof d.daily_goal_ml !== 'number'){ await setDoc(userRef, { daily_goal_ml: 3000 }, { merge:true }); currentGoalMl = 3000; }
           else { currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml))); }
-          goalInput.value = (currentGoalMl/1000).toFixed(1);
           updateProgressUI(lastWaterMl);
+          goalInput.value = (currentGoalMl/1000).toFixed(1);
         });
 
         subscribeMyDailyTotal();
@@ -503,15 +548,12 @@
       step = Math.max(50, Math.round(step/50)*50); // кратно 50 мл
       return step;
     }
-
     function renderYAxis(niceMax, step){
-      // подписи слева
       if (yTicksEl) {
         const ticks = [];
         for (let v = niceMax; v >= 0; v -= step) ticks.push(v);
         yTicksEl.innerHTML = ticks.map(v=>`<div class="tick">${v}</div>`).join('');
       }
-      // сетка внутри графика
       if (hourChart) {
         const inner = 120; // высота области столбиков (140 - padding*2)
         const grid = document.createElement('div'); grid.className = 'hgrid';
@@ -523,7 +565,6 @@
         hourChart.appendChild(grid);
       }
     }
-
     function renderHourChart(){
       hourChart.innerHTML='';
       const total = hourData.reduce((a,b)=>a+b,0);
@@ -581,6 +622,73 @@
           if (current >= 7) await recordAchievement('streak_7', { dateStr: todayStr, streak: current });
         }
       }
+    }
+
+    /* ====== Месяц по дням (таблица) ====== */
+    function liters(n_ml){ return (n_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}); }
+    function share(w,t){ if (!t) return '—'; return Math.round((w/t)*100)+'%'; }
+
+    openMonthDailyBtn.addEventListener('click', async ()=>{
+      const user = auth.currentUser; if (!user) return;
+      const now = new Date();
+      const year = now.getFullYear(); const monthIndex = now.getMonth();
+      const monthStr = year + '-' + String(monthIndex+1).padStart(2,'0');
+      const startStr = monthStr + '-01';
+      const endStr   = monthStr + '-31';
+      const daysInMonth = new Date(year, monthIndex+1, 0).getDate();
+      const rows = Array.from({length:daysInMonth}, (_,i)=>({ day:i+1, dateStr: `${monthStr}-${String(i+1).padStart(2,'0')}`, total_water_ml:0, total_ml:0 }));
+
+      // query across all daily_totals/<dateStr>/users using collectionGroup
+      const cg = query(
+        collectionGroup(db, 'users'),
+        where('uid','==', user.uid),
+        where('dateStr','>=', startStr),
+        where('dateStr','<=', endStr),
+        orderBy('dateStr','asc')
+      );
+      const snap = await getDocs(cg);
+      snap.forEach(d=>{
+        const x = d.data();
+        const ds = x.dateStr;
+        const idx = parseInt(ds.slice(-2), 10) - 1;
+        if (idx>=0 && idx<rows.length){
+          rows[idx].total_water_ml = Math.max(0, x.total_water_ml||0);
+          rows[idx].total_ml = Math.max(0, x.total_ml||0);
+        }
+      });
+
+      // Render table
+      let sumW=0,sumT=0;
+      monthTableBody.innerHTML = rows.map(r=>{
+        sumW += r.total_water_ml; sumT += r.total_ml;
+        return `<tr>
+          <td>${new Date(r.dateStr).toLocaleDateString(undefined,{day:'2-digit', month:'short', weekday:'short'})}</td>
+          <td>${liters(r.total_water_ml)}</td>
+          <td>${liters(r.total_ml)}</td>
+          <td>${share(r.total_water_ml, r.total_ml)}</td>
+        </tr>`;
+      }).join('');
+      sumWaterEl.textContent = liters(sumW);
+      sumTotalEl.textContent = liters(sumT);
+      sumShareEl.textContent = share(sumW,sumT);
+
+      monthTitle.textContent = 'Месяц по дням';
+      monthSubTitle.textContent = new Date(year, monthIndex, 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+      monthModal.style.display = 'flex';
+    });
+
+    monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
+    monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
+
+    // Включаем переключение периода лидерборда
+    if (!window.__tabsBound) {
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
+        tab.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
+        });
+      });
+      window.__tabsBound = true;
     }
   </script>
 </body>
