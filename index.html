@@ -24,9 +24,10 @@
     .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
 
-    main{max-width:1100px;margin:18px auto;padding:0 16px}
-    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
-    @media(max-width:960px){.grid{grid-template-columns:1fr}}
+    main{max-width:1200px;margin:18px auto;padding:0 16px}
+    /* Главная сетка: 2 колонки — слева «Мой день», справа обёртка */
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+    @media(max-width:1024px){.grid{grid-template-columns:1fr}}
 
     .card{background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:clip}
     .card::after{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);filter:blur(20px)}
@@ -94,13 +95,21 @@
     .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
     .ach.locked{opacity:.6;filter:grayscale(0.4)}
 
-    /* Модалка таблицы месяца */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10000}
-    .modal{width:min(880px,92vw);max-height:80vh;overflow:auto;background:#0b1220;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16);text-align:right}
-    .table th:first-child,.table td:first-child{text-align:left}
-    .tfoot td{font-weight:800}
+    /* Правая колонка-обёртка */
+    .rightcol{display:flex;flex-direction:column;gap:18px}
+    .right-two{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:1024px){ .right-two{ grid-template-columns:1fr 1fr } }
+
+    /* Пончик */
+    .donut-wrap{position:relative;display:grid;grid-template-columns:auto 1fr;gap:14px}
+    @media(max-width:520px){ .donut-wrap{grid-template-columns:1fr} }
+    #donutCanvas{width:260px;height:260px;border-radius:12px;background:#0b1220;border:1px solid var(--border)}
+    .donut-center{position:absolute;left:0;top:0;width:260px;height:260px;display:grid;place-items:center;pointer-events:none}
+    .donut-center .big{font-weight:900;font-size:20px}
+    .legend{display:flex;flex-direction:column;gap:8px;align-self:center}
+    .legend-item{display:flex;align-items:center;gap:10px;font-size:14px}
+    .legend-dot{width:10px;height:10px;border-radius:50%}
+    .legend-sub{color:var(--muted);font-size:12px}
   </style>
 </head>
 <body>
@@ -176,50 +185,79 @@
         <div class="muted" style="margin-top:6px">Можно добавлять отрицательные значения (например, -250) для коррекции.</div>
       </section>
 
-      <!-- ПРАВАЯ КОЛОНКА: ЛИДЕРБОРД -->
-      <section class="card" aria-labelledby="lbTitle">
-        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-          <h2 id="lbTitle">Таблица лидеров</h2>
-          <div class="row" style="gap:8px; flex-wrap:wrap;">
-            <div class="tabs" role="tablist">
-              <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
-              <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
-              <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
+      <!-- ПРАВАЯ КОЛОНКА (обёртка для правых панелей) -->
+      <div class="rightcol">
+        <!-- ТАБЛИЦА ЛИДЕРОВ -->
+        <section class="card" aria-labelledby="lbTitle">
+          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+            <h2 id="lbTitle">Таблица лидеров</h2>
+            <div class="row" style="gap:8px; flex-wrap:wrap;">
+              <div class="tabs" role="tablist">
+                <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
+                <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
+                <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
+              </div>
+              <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
             </div>
-            <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Статистика по дням месяца</button>
           </div>
-        </div>
-        <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
-        <div class="lb-list" id="lbList" aria-live="polite"></div>
-        <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
-      </section>
+          <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
+          <div class="lb-list" id="lbList" aria-live="polite"></div>
+          <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
+        </section>
 
-      <!-- ПРАВАЯ КОЛОНКА: АНАЛИТИКА -->
-      <section class="card" aria-labelledby="insightsTitle">
-        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-          <h2 id="insightsTitle">Аналитика сегодня</h2>
-          <div class="muted">по воде-эквиваленту</div>
-        </div>
+        <!-- Две панели рядом на широком экране -->
+        <div class="right-two">
+          <!-- АНАЛИТИКА СЕГОДНЯ -->
+          <section class="card" aria-labelledby="insightsTitle">
+            <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+              <h2 id="insightsTitle">Аналитика сегодня</h2>
+              <div class="muted">по воде-эквиваленту</div>
+            </div>
 
-        <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
-        <div class="hour-wrap">
-          <div class="y-axis">
-            <div class="ylabel">мл</div>
-            <div id="yTicks" class="yticks"></div>
-          </div>
-          <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
-        </div>
-        <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
-        <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
+            <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
+            <div class="hour-wrap">
+              <div class="y-axis">
+                <div class="ylabel">мл</div>
+                <div id="yTicks" class="yticks"></div>
+              </div>
+              <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
+            </div>
+            <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+            <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
 
-        <div class="muted" style="margin-top:14px">Ачивки</div>
-        <div id="achievements" class="ach-grid"></div>
-      </section>
+            <div class="muted" style="margin-top:14px">Ачивки</div>
+            <div id="achievements" class="ach-grid"></div>
+          </section>
+
+          <!-- ПАНЕЛЬ ПОНЧИКА -->
+          <section class="card" aria-labelledby="donutTitle">
+            <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+              <h2 id="donutTitle">Состав напитков (сегодня)</h2>
+              <div class="muted">по воде-эквиваленту</div>
+            </div>
+
+            <div class="donut-wrap" style="margin-top:6px">
+              <div style="position:relative">
+                <canvas id="donutCanvas" width="260" height="260" aria-label="Диаграмма по напиткам"></canvas>
+                <div class="donut-center">
+                  <div style="text-align:center">
+                    <div class="big" id="donutTotal">0,0 л</div>
+                    <div class="muted" style="font-size:12px">сегодня</div>
+                  </div>
+                </div>
+              </div>
+              <div class="legend" id="donutLegend"></div>
+            </div>
+
+            <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
+          </section>
+        </div>
+      </div>
     </div>
   </main>
 
-  <footer style="max-width:1100px;margin:26px auto 60px;padding:0 16px;" class="muted">
-    Один HTML-файл на Firebase + Firestore. Индикатор прогресса и рейтинг считают воду-эквивалент. Ачивки и график — в отдельной панели «Аналитика сегодня».
+  <footer style="max-width:1200px;margin:26px auto 60px;padding:0 16px;" class="muted">
+    Один HTML-файл на Firebase + Firestore. Индикатор прогресса, рейтинг и аналитика считают воду-эквивалент. Пончик показывает доли напитков за сегодня.
   </footer>
 
   <template id="lbRowTpl">
@@ -312,6 +350,7 @@
       { key:'juice',    name:'Соки',               factor: 0.90 },
       { key:'lemonade', name:'Лимонады',           factor: 0.90 },
     ];
+    const BEV_BY_KEY = Object.fromEntries(BEVERAGES.map(b=>[b.key,b]));
 
     // --- UI refs
     const signInBtn = document.getElementById('signInBtn');
@@ -357,9 +396,15 @@
     const sumTotalEl = document.getElementById('sumTotal');
     const sumShareEl = document.getElementById('sumShare');
 
+    // Donut refs
+    const donutCanvas = document.getElementById('donutCanvas');
+    const donutLegend = document.getElementById('donutLegend');
+    const donutEmpty  = document.getElementById('donutEmpty');
+    const donutTotalEl= document.getElementById('donutTotal');
+
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
     function fitGoalText(){ const wrap = document.querySelector('.progress .inside'); if (!wrap || !goalNumbers) return; goalNumbers.style.transform = 'scale(1)'; const maxW = Math.max(10, wrap.clientWidth - 12); const w = goalNumbers.scrollWidth; goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`; }
-    window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(fitGoalText,120);}})());
+    window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{fitGoalText(); drawDonut();},120);}})());
     function updateProgressUI(water_ml){ const goal = Math.max(0, currentGoalMl || 0); const ratio = goal > 0 ? water_ml / goal : 0; setRingProgress(ratio); goalNumbers.textContent = `${(water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} / ${(goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`; goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`; fitGoalText(); }
 
     // Beverages UI
@@ -437,6 +482,7 @@
 
     // Aggregations
     let lastWaterMl = 0;
+
     function subscribeMyDailyTotal(){
       if (unsubMyDaily) unsubMyDaily();
       const { dateStr } = keysFor(new Date());
@@ -537,14 +583,18 @@
       const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
       unsubIntakes = onSnapshot(qy, (qs)=>{
         hourData = new Array(24).fill(0);
+        compMap = Object.create(null); // обнуляем состав
         qs.forEach(d=>{
           const it=d.data();
           const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
           const h=(ts instanceof Date) ? ts.getHours() : 0;
-          const wml = it.water_ml || Math.round((it.ml||0) * (it.factor||1));
-          if (h>=0 && h<24) hourData[h] += Math.max(0, wml);
+          const wml = Math.max(0, it.water_ml ?? Math.round((it.ml||0) * (it.factor||1)));
+          if (h>=0 && h<24) hourData[h] += wml;
+          const key = it.beverage || 'unknown';
+          compMap[key] = (compMap[key]||0) + wml;
         });
         renderHourChart();
+        drawDonut();
       });
     }
 
@@ -578,7 +628,7 @@
     function renderHourChart(){
       hourChart.innerHTML='';
       const total = hourData.reduce((a,b)=>a+b,0);
-      if (hourEmpty) hourEmpty.style.display = total > 0 ? 'none' : 'block';
+      hourEmpty.style.display = total > 0 ? 'none' : 'block';
 
       const defaultMax = 1000, defaultStep = 250;
       if (total <= 0) { renderYAxis(defaultMax, defaultStep); return; }
@@ -698,7 +748,7 @@
       }).join('');
       sumWaterEl.textContent = liters(sumW);
       sumTotalEl.textContent = liters(sumT);
-      sumShareEl.textContent = '—'; // суммарный % к цели не считаем
+      sumShareEl.textContent = '—';
 
       monthTitle.textContent = 'Месяц по дням';
       monthSubTitle.textContent = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
@@ -707,6 +757,80 @@
 
     monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
     monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
+
+    /* ====== ПОНЧИК: расчёт и отрисовка ====== */
+    const PALETTE = [
+      '#7dd3fc', '#60a5fa', '#a78bfa', '#f472b6', '#fca5a5', '#fcd34d', '#86efac', '#67e8f9'
+    ];
+    let compMap = Object.create(null); // key -> water_ml
+
+    function drawDonut(){
+      if (!donutCanvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const W = 260, H = 260;
+      donutCanvas.width = W * dpr;
+      donutCanvas.height = H * dpr;
+      donutCanvas.style.width = W + 'px';
+      donutCanvas.style.height= H + 'px';
+      const ctx = donutCanvas.getContext('2d');
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.clearRect(0,0,W,H);
+
+      const entries = Object.entries(compMap).filter(([k,v])=>v>0);
+      const total = entries.reduce((s,[,v])=>s+v,0);
+      donutTotalEl.textContent = (total/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}) + ' л';
+
+      donutEmpty.style.display = total>0 ? 'none':'block';
+      donutLegend.innerHTML = '';
+
+      // Пусто — рисуем легкий фон-кольцо
+      const cx = W/2, cy = H/2, R = 100, r = 66; // внешний и внутренний радиусы
+      if (total <= 0){
+        ctx.globalAlpha = .18;
+        ctx.beginPath();
+        ctx.arc(cx,cy,R,0,Math.PI*2);
+        ctx.arc(cx,cy,r,Math.PI*2,0,true);
+        ctx.closePath();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      // Сегменты
+      let start = -Math.PI/2;
+      const gap = 0.02; // зазор между сегментами
+      entries.sort((a,b)=>b[1]-a[1]).forEach(([key,val],i)=>{
+        const frac = val/total;
+        const ang  = Math.max(0.04, frac * Math.PI*2) - gap; // минимум видимый сегмент
+        const end  = start + ang;
+
+        // путь пончика: внешний по часовой → внутренний обратно
+        ctx.beginPath();
+        ctx.arc(cx,cy,R,start,end);
+        ctx.arc(cx,cy,r,end,start,true);
+        ctx.closePath();
+        ctx.fillStyle = PALETTE[i % PALETTE.length];
+        ctx.fill();
+
+        start = end + gap;
+      });
+
+      // Легенда
+      entries.forEach(([key,val],i)=>{
+        const bev = BEV_BY_KEY[key] || { name: key };
+        const node = document.createElement('div');
+        node.className = 'legend-item';
+        node.innerHTML = `
+          <div class="legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></div>
+          <div>
+            <div>${bev.name || key}</div>
+            <div class="legend-sub">${(val/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л • ${Math.round((val/Math.max(1,total))*100)}%</div>
+          </div>
+        `;
+        donutLegend.appendChild(node);
+      });
+    }
   </script>
 </body>
 </html>
