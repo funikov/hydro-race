@@ -134,6 +134,7 @@
     .ach-title{font-size:12px;font-weight:700} .ach-sub{font-size:11px;color:var(--muted)}
     .ach-ill{width:56px;height:56px;border-radius:12px;overflow:hidden;background:#0b0d24;border:1px solid var(--border);display:grid;place-items:center}
     .ach-ill svg{width:46px;height:46px}
+    .ach-ill img{width:56px;height:56px;object-fit:contain;background:transparent;display:block}
 
     .donut-wrap{position:relative;display:grid;grid-template-columns:auto 1fr;gap:14px}
     @media(max-width:520px){ .donut-wrap{grid-template-columns:1fr} }
@@ -242,7 +243,7 @@
       </section>
 
       <section class="card" id="lbCard" aria-labelledby="lbTitle">
-        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+        <div class="row" style="justify-content: space между; align-items: baseline; gap: 8px;">
           <h2 id="lbTitle">Таблица лидеров</h2>
           <div class="row" style="gap:8px; flex-wrap:wrap;">
             <div class="tabs" role="tablist">
@@ -298,7 +299,6 @@
         <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
       </section>
 
-      <!-- Ачивки — низ страницы -->
       <section class="card" id="achCard" aria-labelledby="achTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="achTitle">Ачивки</h2>
@@ -772,6 +772,20 @@
       pure_water_day:   badge('#0ea5e9','💧'),
     };
 
+    /* === Только для одной ачивки — подключаем PNG === */
+    const ASSETS_BASE = './assets/ach/';
+    const ACH_IMG = {
+      first_liter: ASSETS_BASE + 'first_liter.png', // картинка с прозрачностью 1024x1024
+    };
+    function achMarkup(id, alt, fallbackSvg) {
+      const src = ACH_IMG[id];
+      if (src) {
+        return `<img src="${src}" alt="${alt}" width="56" height="56" loading="lazy"
+                 style="display:block;width:56px;height:56px;object-fit:contain;background:transparent" />`;
+      }
+      return fallbackSvg;
+    }
+
     const achGrid = document.getElementById('achievements');
     let unlockedAll = new Set();   // постоянные (и любые не-дневные)
     let unlockedToday = new Set(); // дневные за сегодня
@@ -781,10 +795,15 @@
       ACH_DEFS.forEach(a=>{
         const isDaily = DAILY_ACH_IDS.has(a.id);
         const has = isDaily ? unlockedToday.has(a.id) : unlockedAll.has(a.id);
+
+        const fallback = ACH_SVGS[a.id] || badge('#64748b','?');
+        const ill = achMarkup(a.id, a.name, fallback);
+
         const el=document.createElement('div');
         el.className='ach'+(has?'':' locked');
-        el.innerHTML=`<div class="ach-ill">${ACH_SVGS[a.id]||badge('#64748b','?')}</div>
-          <div class="ach-title">${a.name}</div><div class="ach-sub">${a.desc}${isDaily ? ' • сегодня' : ''}</div>`;
+        el.innerHTML=`<div class="ach-ill">${ill}</div>
+          <div class="ach-title">${a.name}</div>
+          <div class="ach-sub">${a.desc}${isDaily ? ' • сегодня' : ''}</div>`;
         achGrid.appendChild(el);
       });
     }
