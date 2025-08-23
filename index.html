@@ -382,7 +382,7 @@
       milk:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 3h8l-2 3v13a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V6L8 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 11h4M10 15h4" stroke="currentColor" stroke-width="1.5"/></svg>`,
       cola_zero:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
       kvass:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9L6 6Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9Л6 6Z".replace('Л','L') stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
       lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10L5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
     };
 
@@ -680,7 +680,6 @@
     }
 
     const ACH_DEFS = [
-      // Базовые (были)
       { id:'first_liter', name:'Первый литр', desc:'1 л за день' },
       { id:'goal_today',  name:'Цель достигнута', desc:'Выполнить дневную цель' },
       { id:'streak_3',    name:'Серия ×3', desc:'3 дня подряд' },
@@ -806,7 +805,6 @@
     }
 
     async function lifetimeTotalWater(uid){
-      // Получаем все 'users' и суммируем только те, где есть yearStr (годовые итоги)
       const cg = await getDocs(query(collectionGroup(db,'users'), where('uid','==',uid)));
       let sum = 0;
       cg.forEach(d=>{
@@ -831,7 +829,6 @@
         myTotalWaterLitersEl.textContent = (water/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
         myRawTotalEl.textContent = `Всего напитков: ${(raw/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`;
         updateProgressUI(water);
-        // Проверим ачивки (без списка приёмов — поведенческие добьём при обновлении intakes)
         await checkStreakAndAchievements(water, todayIntakes);
       });
     }
@@ -969,6 +966,7 @@
       toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
     });
 
+    // Синхронизация высот «Аналитика ↔ Пончик»
     function syncHeights(){
       const desktop = window.matchMedia('(min-width: 961px)').matches;
       if (!desktop){ insightsCard.style.height=''; return; }
@@ -979,10 +977,9 @@
       const ro = new ResizeObserver(()=>syncHeights());
       ro.observe(donutCard); ro.observe(insightsCard);
     }
+    renderBeverages(); updateFactorHint(); requestAnimationFrame(()=>{ syncHeights(); });
 
-    renderBeverages(); updateFactorHint(); requestAnimationFrame(()=>syncHeights());
-
-    // ====== СЕГОДНЯШНИЕ ПРИЁМЫ (для графика, пончика и поведенческих ачивок) ======
+    // ====== СЕГОДНЯШНИЕ ПРИЁМЫ ======
     let todayIntakes = [];
     function subscribeIntakesToday(){
       if (unsubIntakes) unsubIntakes();
@@ -1006,7 +1003,6 @@
         });
         renderHourChart();
         drawDonut();
-        // Поведенческие/разнообразные/утренняя цель
         await checkStreakAndAchievements(lastWaterMl || hourData.reduce((a,b)=>a+b,0), todayIntakes);
       });
     }
@@ -1020,16 +1016,15 @@
       const todayStr = keysFor(new Date()).dateStr;
       const yesterdayStr = ymdShift(new Date(), -1);
 
-      // --- Объём / цель (моментальные) ---
+      // Объём / цель
       if (todayWater >= 1000) await recordAchievement('first_liter', { dateStr: todayStr });
       if (todayWater >= goal)  await recordAchievement('goal_today',  { dateStr: todayStr, goal_ml: goal });
       if (todayWater >= 0.5*goal) await recordAchievement('half_goal', { dateStr: todayStr, goal_ml: goal });
       if (todayWater >= 4000) await recordAchievement('camel_4l', { dateStr: todayStr });
       if (todayWater >= 2*goal) await recordAchievement('double_goal', { dateStr: todayStr, goal_ml: goal });
-
       if (Math.abs(todayWater - goal) <= 100 && todayWater>0) await recordAchievement('precision_sniper', { dateStr: todayStr, goal_ml: goal, delta_ml: todayWater - goal });
 
-      // Утренняя цель: находим момент первого пересечения цели
+      // Утренняя цель
       if (intakes.length && todayWater >= goal){
         const sorted = [...intakes].sort((a,b)=> (a.ts?.getTime?.()||0)-(b.ts?.getTime?.()||0));
         let cum=0, crossed=null;
@@ -1037,7 +1032,7 @@
         if (crossed && crossed.getHours() < 15) await recordAchievement('morning_goal', { dateStr: todayStr, hour: crossed.getHours() });
       }
 
-      // --- Поведение / разнообразие ---
+      // Поведение / разнообразие
       if (intakes.length){
         const sorted = [...intakes].sort((a,b)=> (a.ts?.getTime?.()||0)-(b.ts?.getTime?.()||0));
         const firstH = sorted[0]?.ts?.getHours?.();
@@ -1059,52 +1054,29 @@
         if (typesCount === 1 && compMap.water>0) await recordAchievement('pure_water_day', { dateStr: todayStr });
       }
 
-      // --- Серии ---
+      // Серии
       if (todayWater >= goal){
         const lastDone = u.streak_last_completed_dateStr;
         const isYesterdayDone = (lastDone === yesterdayStr);
         const willBeCurrent = isYesterdayDone ? (u.streak_current||0)+1 : 1;
-        // Сохранение streak'а (как и было)
         if (lastDone !== todayStr){
           const best = Math.max(u.streak_best||0, willBeCurrent);
           await setDoc(userRef, { streak_current: willBeCurrent, streak_best: best, streak_last_completed_dateStr: todayStr }, { merge:true });
         }
-        // Новые ачивки по сериям
         if (willBeCurrent >= 14) await recordAchievement('streak_14', { dateStr: todayStr, streak: willBeCurrent });
         if (willBeCurrent >= 30) await recordAchievement('streak_30', { dateStr: todayStr, streak: willBeCurrent });
         if (!isYesterdayDone) await recordAchievement('comeback', { dateStr: todayStr });
-        // Идеальная неделя (7/7)
         const weekHits = await countWeekGoals(user.uid, new Date(), goal);
         if (weekHits >= 7) await recordAchievement('perfect_week_7', { dateStr: todayStr });
-        // Месячный марафон (20+ дней)
         const monthHits = await countMonthGoalHits(user.uid, new Date(), goal);
         if (monthHits >= 20) await recordAchievement('monthly_20', { dateStr: todayStr, count: monthHits });
       }
 
-      // --- Долгосрочные накопительные (по годовому суммарному) ---
+      // Долгосрочные
       const life = await lifetimeTotalWater(user.uid);
       if (life >= 100*1000)  await recordAchievement('lifetime_100l',  { total_ml: life });
       if (life >= 500*1000)  await recordAchievement('lifetime_500l', { total_ml: life });
       if (life >= 1000*1000) await recordAchievement('lifetime_1000l',{ total_ml: life });
-    }
-
-    // ====== Отрисовка / вспомогательные ======
-    function syncHeights(){ const desktop = window.matchMedia('(min-width: 961px)').matches; if (!desktop){ insightsCard.style.height=''; return; } requestAnimationFrame(()=>{ insightsCard.style.height = donutCard.offsetHeight + 'px'; }); }
-    window.addEventListener('resize', ()=>syncHeights());
-    if ('ResizeObserver' in window){ const ro = new ResizeObserver(()=>syncHeights()); ro.observe(donutCard); ro.observe(insightsCard); }
-
-    function renderLeaderboard(items){
-      lbListEl.innerHTML='';
-      if (!items.length){ lbListEl.innerHTML='<div class="muted">Пока пусто. Будьте первым! 💧</div>'; return; }
-      const tpl = document.getElementById('lbRowTpl');
-      items.forEach((it,i)=>{
-        const node = tpl.content.firstElementChild.cloneNode(true);
-        node.querySelector('.rank').textContent = i+1;
-        node.querySelector('.av').innerHTML = it.photoURL ? `<img src="${it.photoURL}" alt="Аватар" width="32" height="32"/>` : '';
-        node.querySelector('.nm').textContent = it.displayName || 'Без имени';
-        node.querySelector('.am').textContent = `${(Math.max(0,it.total_water_ml||0)/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л воды-экв.`;
-        lbListEl.appendChild(node);
-      });
     }
   </script>
 </body>
