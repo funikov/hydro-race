@@ -49,7 +49,7 @@
     .progress .ring-bg{stroke:rgba(148,163,184,.18);stroke-width:10;fill:none}
     .progress .ring-fg{stroke:linear-gradient(180deg, var(--brand), var(--brand2));stroke:var(--brand);stroke-linecap:round;stroke-width:10;fill:none;transition:stroke-dashoffset .5s ease}
     .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-    .progress .inside .big{font-weight:900;font-size:18px}
+    .progress .inside .big{font-weight:900;font-size:18px;display:inline-block;white-space:nowrap;transform-origin:center center}
     .goal-controls{display:flex;gap:8px;align-items:center}
 
     .hidden{display:none!important}
@@ -243,6 +243,19 @@
     const goalInput = document.getElementById('goalInput');
     const saveGoalBtn = document.getElementById('saveGoalBtn');
 
+    // Подгон текста прогресса под круг
+    function fitGoalText(){
+      const wrap = document.querySelector('.progress .inside');
+      if (!wrap || !goalNumbers) return;
+      goalNumbers.style.transform = 'scale(1)';
+      const maxW = Math.max(10, wrap.clientWidth - 12);
+      const w = goalNumbers.scrollWidth;
+      const scale = Math.min(1, maxW / w);
+      goalNumbers.style.transform = `scale(${scale})`;
+    }
+    function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), ms); }; }
+    window.addEventListener('resize', debounce(fitGoalText, 120));
+
     const pad = (n)=>String(n).padStart(2,'0');
     const keysFor = (date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
     todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`;
@@ -301,9 +314,11 @@
       const goalL = (goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
       goalNumbers.textContent = `${waterL} / ${goalL} л`;
       goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`;
+      fitGoalText();
     }
 
     onAuthStateChanged(auth, async (user) => {
+      fitGoalText();
       if (user) {
         appEl.classList.remove('hidden');
         signInBtn.classList.add('hidden');
