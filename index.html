@@ -68,12 +68,16 @@
     main{max-width:1100px;margin:18px auto;padding:0 16px}
     .grid.two-col{display:grid;gap:18px;align-items:stretch}
     #achCard{grid-area: ach;} #myDayCard{grid-area: day;} #lbCard{grid-area: lb;} #insightsCard{grid-area: insights;} #donutCard{grid-area: donut;}
+
+    /* Мобильная — ачивки в самом низу */
     @media(max-width:960px){
-      .grid.two-col{grid-template-columns:1fr;grid-template-areas:"ach" "day" "lb" "insights" "donut";}
+      .grid.two-col{grid-template-columns:1fr;grid-template-areas:"day" "lb" "insights" "donut" "ach";}
     }
+    /* Десктоп — ачивки под двумя рядами */
     @media (min-width: 961px){
-      .grid.two-col{grid-template-columns:1.1fr .9fr;grid-template-areas:"ach ach" "day lb" "insights donut";}
+      .grid.two-col{grid-template-columns:1.1fr .9fr;grid-template-areas:"day lb" "insights donut" "ach ach";}
     }
+
     .card{position:relative;overflow:clip;background:linear-gradient(180deg, rgba(34,211,238,.06), #070b18);
       border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; isolation:isolate;}
     .card::before{content:""; position:absolute; inset:-30% -10% auto auto; width:200px;height:200px; border-radius:50%;
@@ -175,14 +179,6 @@
 
   <main id="app" class="hidden">
     <div class="grid two-col">
-      <section class="card" id="achCard" aria-labelledby="achTitle">
-        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-          <h2 id="achTitle">Ачивки</h2>
-          <div class="muted">соберите их все!</div>
-        </div>
-        <div id="achievements" class="ach-grid"></div>
-      </section>
-
       <section class="card" id="myDayCard" aria-labelledby="myDayTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="myDayTitle">Мой день</h2>
@@ -301,6 +297,15 @@
 
         <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
       </section>
+
+      <!-- Ачивки — теперь в самом низу -->
+      <section class="card" id="achCard" aria-labelledby="achTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="achTitle">Ачивки</h2>
+          <div class="muted" id="achHint">дневные обновляются каждый день</div>
+        </div>
+        <div id="achievements" class="ach-grid"></div>
+      </section>
     </div>
   </main>
 
@@ -360,7 +365,7 @@
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWm8з2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -378,11 +383,11 @@
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      coffee:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h10a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M16 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4c0 1 .8 1.5.8 2.4S8 8 8 8M11 4c0 1 .8 1.5.8 2.4S11 8 11 8" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      coffee:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h10a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3З" stroke="currentColor" stroke-width="1.5"/><path d="M16 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4c0 1 .8 1.5.8 2.4S8 8 8 8M11 4c0 1 .8 1.5.8 2.4S11 8 11 8" stroke="currentColor" stroke-width="1.5"/></svg>`.replace('З','Z'),
       milk:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 3h8l-2 3v13a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V6L8 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 11h4M10 15h4" stroke="currentColor" stroke-width="1.5"/></svg>`,
       cola_zero:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
       kvass:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9Л6 6Z".replace('Л','L') stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9L6 6Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
       lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10L5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
     };
 
@@ -655,14 +660,13 @@
         }
         hourChart.appendChild(grid);
       }
-      syncHeights();
     }
     function renderHourChart(){
       hourChart.innerHTML='';
       const total = hourData.reduce((a,b)=>a+b,0);
       hourEmpty.style.display = total > 0 ? 'none' : 'block';
       const defaultMax = 1000, defaultStep = 250;
-      if (total <= 0) { renderYAxis(defaultMax, defaultStep); return; }
+      if (total <= 0) { renderYAxis(defaultMax, defaultStep); syncHeights(); return; }
 
       const max = Math.max(1, ...hourData);
       const step = niceStep(max, 4);
@@ -679,42 +683,50 @@
       syncHeights();
     }
 
+    /* ====== Ачивки ====== */
+
     const ACH_DEFS = [
+      // Базовые
       { id:'first_liter', name:'Первый литр', desc:'1 л за день' },
       { id:'goal_today',  name:'Цель достигнута', desc:'Выполнить дневную цель' },
       { id:'streak_3',    name:'Серия ×3', desc:'3 дня подряд' },
       { id:'streak_7',    name:'Серия ×7', desc:'7 дней подряд' },
 
-      // Объём за день / цель
+      // Объём за день / цель (ДНЕВНЫЕ)
       { id:'half_goal',        name:'Разогрелся', desc:'≥50% дневной цели' },
       { id:'camel_4l',         name:'Верблюд', desc:'≥4.0 л за день' },
       { id:'double_goal',      name:'Двойной удар', desc:'≥200% дневной цели' },
       { id:'precision_sniper', name:'Снайпер', desc:'В пределах ±100 мл от цели' },
       { id:'morning_goal',     name:'Ранний финиш', desc:'Цель до 15:00' },
 
-      // Серии
+      // Серии (НЕ дневные)
       { id:'streak_14', name:'Две недели', desc:'Серия 14' },
       { id:'streak_30', name:'Железный', desc:'Серия 30' },
       { id:'perfect_week_7', name:'Идеальная неделя', desc:'7/7 дней этой недели' },
       { id:'monthly_20', name:'Месячный марафон', desc:'≥20 дней в месяце' },
       { id:'comeback', name:'Камбек', desc:'После провала — выполнено' },
 
-      // Долгосрочные
+      // Долгосрочные (НЕ дневные)
       { id:'lifetime_100l', name:'Сотня', desc:'100 л всего' },
       { id:'lifetime_500l', name:'Пол-океана', desc:'500 л всего' },
       { id:'lifetime_1000l', name:'Тысяча', desc:'1000 л всего' },
 
-      // Поведение
+      // Поведение (ДНЕВНЫЕ)
       { id:'early_bird',  name:'Жаворонок', desc:'Первый приём до 09:00' },
       { id:'night_owl',   name:'Сова', desc:'Приём после 22:00' },
       { id:'hourly_6',    name:'Ниндзя часов', desc:'В 6+ разных часах суток' },
       { id:'pacer_10',    name:'Ровный темп', desc:'10+ добавлений за день' },
       { id:'no_corrections', name:'Без правок', desc:'Без отрицательных добавлений' },
 
-      // Разнообразие / состав
+      // Разнообразие (ДНЕВНЫЕ)
       { id:'diversity_4',   name:'Дегустатор', desc:'4+ типов напитков за день' },
       { id:'pure_water_day',name:'Кристально', desc:'Только вода за день' },
     ];
+
+    const DAILY_ACH_IDS = new Set([
+      'first_liter','goal_today','half_goal','camel_4l','double_goal','precision_sniper','morning_goal',
+      'early_bird','night_owl','hourly_6','pacer_10','no_corrections','diversity_4','pure_water_day'
+    ]);
 
     const badge = (color, text)=>`
       <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g>
@@ -755,29 +767,60 @@
     };
 
     const achGrid = document.getElementById('achievements');
-    let unlocked = new Set();
+    let unlockedAll = new Set();   // постоянные (и любые не-дневные)
+    let unlockedToday = new Set(); // дневные за сегодня
 
     function renderAchievements(){
+      const today = keysFor(new Date()).dateStr;
       achGrid.innerHTML='';
       ACH_DEFS.forEach(a=>{
-        const has=unlocked.has(a.id);
+        const isDaily = DAILY_ACH_IDS.has(a.id);
+        const has = isDaily ? unlockedToday.has(a.id) : unlockedAll.has(a.id);
         const el=document.createElement('div');
         el.className='ach'+(has?'':' locked');
         el.innerHTML=`<div class="ach-ill">${ACH_SVGS[a.id]||badge('#64748b','?')}</div>
-          <div class="ach-title">${a.name}</div><div class="ach-sub">${a.desc}</div>`;
+          <div class="ach-title">${a.name}</div><div class="ach-sub">${a.desc}${isDaily ? ' • сегодня' : ''}</div>`;
         achGrid.appendChild(el);
       });
     }
+
     function subscribeAchievements(){
       if (unsubAch) unsubAch();
       const uid=auth.currentUser?.uid; if (!uid) return;
-      unsubAch = onSnapshot(collection(db,'users',uid,'achievements'), (qs)=>{ unlocked = new Set(qs.docs.map(d=>d.id)); renderAchievements(); });
+      const today = keysFor(new Date()).dateStr;
+      unlockedAll = new Set();
+      unlockedToday = new Set();
+      unsubAch = onSnapshot(collection(db,'users',uid,'achievements'), (qs)=>{
+        unlockedAll.clear(); unlockedToday.clear();
+        qs.forEach(docSnap=>{
+          const x = docSnap.data()||{};
+          const baseId = x.id || null; // сохраняем исходный id
+          if (!baseId) return;
+          const isDaily = x.daily === true || DAILY_ACH_IDS.has(baseId);
+          if (isDaily){
+            if (x.dateStr === today) unlockedToday.add(baseId);
+          } else {
+            unlockedAll.add(baseId);
+          }
+        });
+        renderAchievements();
+      });
     }
-    async function recordAchievement(id,payload={}){ const uid=auth.currentUser?.uid; if (!uid || unlocked.has(id)) return; await setDoc(doc(db,'users',uid,'achievements',id), { id, unlockedAt: serverTimestamp(), ...payload }, { merge:true }); }
+
+    // защита от повторной записи в одну сессию
+    const emittedAchDocIds = new Set();
+    async function recordAchievement(id,payload={}){
+      const uid=auth.currentUser?.uid; if (!uid) return;
+      const isDaily = DAILY_ACH_IDS.has(id);
+      const ds = payload.dateStr || keysFor(new Date()).dateStr;
+      const docId = isDaily ? `${id}_${ds}` : id;
+      if (emittedAchDocIds.has(docId)) return;
+      emittedAchDocIds.add(docId);
+      await setDoc(doc(db,'users',uid,'achievements',docId), { id, daily:isDaily, dateStr: ds, unlockedAt: serverTimestamp(), ...payload }, { merge:true });
+    }
 
     function ymdShift(date,delta){ const dt=new Date(date); dt.setDate(dt.getDate()+delta); const y=dt.getFullYear(); const m=('0'+(dt.getMonth()+1)).slice(-2); const d=('0'+dt.getDate()).slice(-2); return `${y}-${m}-${d}`; }
     function startOfWeek(d){ const dt=new Date(d); const day=(dt.getDay()+6)%7; dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-day); return dt; }
-
     function onSnapshotOnce(ref){ return new Promise((resolve)=>{ const unsub=onSnapshot(ref,(snap)=>{ resolve(snap); unsub(); },{includeMetadataChanges:false}); }); }
 
     async function fetchDailyWater(uid, dateStr){
@@ -785,7 +828,6 @@
       if (!ds.exists()) return 0;
       const x = ds.data(); return Math.max(0, x.total_water_ml||0);
     }
-
     async function countWeekGoals(uid, when, goal){
       const start = startOfWeek(when);
       let hits=0;
@@ -797,13 +839,11 @@
       }
       return hits;
     }
-
     async function countMonthGoalHits(uid, date, goal){
       const year = date.getFullYear(); const month = date.getMonth();
       const rows = await fetchMonthRowsSafe(uid, year, month);
       return rows.reduce((acc,r)=> acc + ((r.total_water_ml||0) >= goal ? 1 : 0), 0);
     }
-
     async function lifetimeTotalWater(uid){
       const cg = await getDocs(query(collectionGroup(db,'users'), where('uid','==',uid)));
       let sum = 0;
@@ -862,7 +902,7 @@
           }
         });
         return rows;
-      } catch(err){
+      } catch{
         const promises = rows.map(async (r)=>{
           const ref = doc(db,'daily_totals', r.dateStr, 'users', uid);
           const ds  = await getDoc(ref);
@@ -1016,7 +1056,7 @@
       const todayStr = keysFor(new Date()).dateStr;
       const yesterdayStr = ymdShift(new Date(), -1);
 
-      // Объём / цель
+      // Объём / цель (дневные)
       if (todayWater >= 1000) await recordAchievement('first_liter', { dateStr: todayStr });
       if (todayWater >= goal)  await recordAchievement('goal_today',  { dateStr: todayStr, goal_ml: goal });
       if (todayWater >= 0.5*goal) await recordAchievement('half_goal', { dateStr: todayStr, goal_ml: goal });
@@ -1032,7 +1072,7 @@
         if (crossed && crossed.getHours() < 15) await recordAchievement('morning_goal', { dateStr: todayStr, hour: crossed.getHours() });
       }
 
-      // Поведение / разнообразие
+      // Поведение / разнообразие (дневные)
       if (intakes.length){
         const sorted = [...intakes].sort((a,b)=> (a.ts?.getTime?.()||0)-(b.ts?.getTime?.()||0));
         const firstH = sorted[0]?.ts?.getHours?.();
@@ -1054,7 +1094,7 @@
         if (typesCount === 1 && compMap.water>0) await recordAchievement('pure_water_day', { dateStr: todayStr });
       }
 
-      // Серии
+      // Серии (постоянные)
       if (todayWater >= goal){
         const lastDone = u.streak_last_completed_dateStr;
         const isYesterdayDone = (lastDone === yesterdayStr);
@@ -1072,7 +1112,7 @@
         if (monthHits >= 20) await recordAchievement('monthly_20', { dateStr: todayStr, count: monthHits });
       }
 
-      // Долгосрочные
+      // Долгосрочные (постоянные)
       const life = await lifetimeTotalWater(user.uid);
       if (life >= 100*1000)  await recordAchievement('lifetime_100l',  { total_ml: life });
       if (life >= 500*1000)  await recordAchievement('lifetime_500l', { total_ml: life });
