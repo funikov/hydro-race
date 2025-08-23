@@ -26,9 +26,24 @@
 
     /* Макет 2×2 */
     main{max-width:1100px;margin:18px auto;padding:0 16px}
-    .grid.two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    .grid.two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch;}
     .col-left,.col-right{display:flex;flex-direction:column;gap:18px}
     @media(max-width:960px){.grid.two-col{grid-template-columns:1fr}}
+
+    /* Выравнивание высот парой по строкам грида */
+    @media (min-width: 961px) {
+      .grid.two-col{
+        grid-template-columns:1.1fr .9fr;
+        grid-template-areas:
+          "day lb"
+          "insights donut";
+      }
+      .col-left, .col-right { display: contents; }           /* 4 карточки становятся прямыми детьми грида */
+      #myDayCard    { grid-area: day; }
+      #lbCard       { grid-area: lb; }
+      #insightsCard { grid-area: insights; }
+      #donutCard    { grid-area: donut; }
+    }
 
     .card{background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:clip}
     .card::after{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);filter:blur(20px)}
@@ -141,7 +156,7 @@
       <!-- ЛЕВАЯ КОЛОНКА -->
       <div class="col-left">
         <!-- Мой день -->
-        <section class="card" aria-labelledby="myDayTitle">
+        <section class="card" id="myDayCard" aria-labelledby="myDayTitle">
           <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
             <h2 id="myDayTitle">Мой день</h2>
             <div class="muted" id="todayLabel"></div>
@@ -192,7 +207,7 @@
         </section>
 
         <!-- Аналитика сегодня -->
-        <section class="card" aria-labelledby="insightsTitle">
+        <section class="card" id="insightsCard" aria-labelledby="insightsTitle">
           <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
             <h2 id="insightsTitle">Аналитика сегодня</h2>
             <div class="muted">по воде-эквиваленту</div>
@@ -217,7 +232,7 @@
       <!-- ПРАВАЯ КОЛОНКА -->
       <div class="col-right">
         <!-- Таблица лидеров -->
-        <section class="card" aria-labelledby="lbTitle">
+        <section class="card" id="lbCard" aria-labelledby="lbTitle">
           <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
             <h2 id="lbTitle">Таблица лидеров</h2>
             <div class="row" style="gap:8px; flex-wrap:wrap;">
@@ -235,7 +250,7 @@
         </section>
 
         <!-- Состав напитков (сегодня) -->
-        <section class="card" aria-labelledby="donutTitle">
+        <section class="card" id="donutCard" aria-labelledby="donutTitle">
           <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
             <h2 id="donutTitle">Состав напитков (сегодня)</h2>
             <div class="muted">по воде-эквиваленту</div>
@@ -316,7 +331,6 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    /* ✅ Исправленный конфиг (латиница) */
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -332,7 +346,7 @@
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    /* ✅ Иконки: только латинские L/Z в path */
+    /* Иконки — латиница L/Z в path */
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -405,6 +419,9 @@
     const donutLegend = document.getElementById('donutLegend');
     const donutEmpty  = document.getElementById('donutEmpty');
     const donutTotalEl= document.getElementById('donutTotal');
+
+    // Состав для пончика должен существовать заранее (во избежание TDZ)
+    let compMap = Object.create(null); // key -> water_ml
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
     function fitGoalText(){ const wrap = document.querySelector('.progress .inside'); if (!wrap || !goalNumbers) return; goalNumbers.style.transform = 'scale(1)'; const maxW = Math.max(10, wrap.clientWidth - 12); const w = goalNumbers.scrollWidth; goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`; }
@@ -587,7 +604,7 @@
       const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
       unsubIntakes = onSnapshot(qy, (qs)=>{
         hourData = new Array(24).fill(0);
-        compMap = Object.create(null);
+        compMap = Object.create(null); // сброс состава
         qs.forEach(d=>{
           const it=d.data();
           const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
@@ -609,7 +626,7 @@
       const base = raw / pow;
       let mult = 1; if (base<=1) mult=1; else if (base<=2) mult=2; else if (base<=5) mult=5; else mult=10;
       let step = mult * pow;
-      step = Math.max(50, Math.round(step/50)*50);
+      step = Math.max(50, Math.round(step/50)*50); // кратно 50 мл
       return step;
     }
     function renderYAxis(niceMax, step){
@@ -764,7 +781,6 @@
 
     /* ====== ПОНЧИК ====== */
     const PALETTE = ['#7dd3fc','#60a5fa','#a78bfa','#f472b6','#fca5a5','#fcd34d','#86efac','#67e8f9'];
-    let compMap = Object.create(null); // key -> water_ml
 
     function drawDonut(){
       if (!donutCanvas) return;
