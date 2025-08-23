@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fredoka:wght@400;600;800&family=Monoton&display=swap" rel="stylesheet">
 
   <style>
-    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ ===== */
+    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ (переопределяются темами) ===== */
     :root{
       --bg1:#0b0f1d;
       --bg2:#0f172a;
@@ -136,7 +136,7 @@
         grid-template-areas:
           "day lb"
           "insights donut"
-          "insights ach"; /* новая строка для ачивок справа под пончиком */
+          "insights ach";
       }
       .col-left, .col-right { display: contents; }
       #myDayCard{grid-area: day;} #lbCard{grid-area: lb;}
@@ -214,7 +214,7 @@
     .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
     .progress .inside .big{
       font-weight:900;
-      font-size:20px;
+      font-size:20px; /* как в пончике */
       display:inline-block;
       white-space:nowrap;
       transform-origin:center center;
@@ -525,7 +525,7 @@
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWм8з2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -548,7 +548,7 @@
       cola_zero:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
       kvass:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
       juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9L6 6Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10Л5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
+      lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10L5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
     };
 
     const BEVERAGES = [
@@ -621,7 +621,7 @@
     let compMap = Object.create(null); // key -> water_ml
 
     // ===== Theme logic =====
-    let currentTheme = null;
+    let currentTheme = null; // 'classic' | 'groovy'
     function setThemeButtons(theme){
       themeClassicBtn.classList.toggle('active', theme==='classic');
       themeGroovyBtn.classList.toggle('active', theme==='groovy');
@@ -653,7 +653,7 @@
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
-    function fitGoalText(){ /* no-op */ }
+    function fitGoalText(){ /* no-op: центр как у пончика, авто-масштаб не нужен */ }
     window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{fitGoalText(); drawDonut();},120);}})());
     function updateProgressUI(water_ml){
       const goal = Math.max(0, currentGoalMl || 0);
@@ -891,8 +891,6 @@
       { id:'streak_3',    name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
       { id:'streak_7',    name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
     ];
-
-    // Векторные иллюстрации (оригинальные, мультяшные, без ссылок на чьи-то стили)
     const ACH_SVGS = {
       first_liter: `
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -903,7 +901,6 @@
           </defs>
           <g fill="none" stroke="none">
             <path d="M32 6c7 10 14 18 14 26a14 14 0 1 1-28 0c0-8 7-16 14-26z" fill="url(#g1)"/>
-            <!-- глазки-жаба -->
             <circle cx="24" cy="34" r="3" fill="#0b0d24"/>
             <circle cx="40" cy="34" r="3" fill="#0b0d24"/>
             <path d="M26 42c4 3 8 3 12 0" stroke="#0b0d24" stroke-width="2" stroke-linecap="round"/>
@@ -921,7 +918,6 @@
             <circle cx="32" cy="32" r="22" fill="url(#t1)" opacity=".9"/>
             <circle cx="32" cy="32" r="14" fill="#0b0d24" opacity=".35"/>
             <circle cx="32" cy="32" r="7" fill="#00ffd1" opacity=".9"/>
-            <!-- лилия-стрела -->
             <path d="M50 26l-10 10-4-4 10-10 4 4z" fill="#7df9ff"/>
             <path d="M53 23c-4-1-7 1-10 3 2-3 4-6 3-10 3 2 6 4 7 7z" fill="#98f5e1"/>
           </g>
@@ -935,9 +931,7 @@
             </linearGradient>
           </defs>
           <g>
-            <!-- пламя -->
             <path d="M32 8c8 8 2 12 8 18 6 6 6 18-8 22-14-4-14-16-8-22 6-6 0-10 8-18z" fill="url(#fl)"/>
-            <!-- грибы -->
             <circle cx="22" cy="46" r="5" fill="#7df9ff"/><rect x="21" y="46" width="2" height="6" fill="#c8ffee"/>
             <circle cx="42" cy="46" r="5" fill="#00ffd1"/><rect x="41" y="46" width="2" height="6" fill="#c8ffee"/>
           </g>
@@ -946,11 +940,9 @@
       streak_7: `
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
           <g fill="none">
-            <!-- кубок -->
             <path d="M24 14h16a6 6 0 0 1 6 6v6a10 10 0 0 1-10 10h-8A10 10 0 0 1 18 26v-6a6 6 0 0 1 6-6z" fill="#ffd166"/>
             <rect x="28" y="36" width="8" height="8" rx="2" fill="#ffd166"/>
             <rect x="22" y="44" width="20" height="4" rx="2" fill="#ffd166"/>
-            <!-- лилия -->
             <ellipse cx="32" cy="50" rx="14" ry="6" fill="#00ffd1" opacity=".85"/>
             <circle cx="26" cy="50" r="2" fill="#0b0d24"/>
             <circle cx="38" cy="50" r="2" fill="#0b0d24"/>
@@ -1159,31 +1151,7 @@
       toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
     });
 
-    // ===== Подписка на сегодняшние приёмы для доната/графика =====
-    let unsubIntakes=null;
-    function subscribeIntakesToday(){
-      if (unsubIntakes) unsubIntakes();
-      const { dateStr } = keysFor(new Date());
-      const uid = auth.currentUser?.uid; if (!uid) return;
-      const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
-      unsubIntakes = onSnapshot(qy, (qs)=>{
-        hourData = new Array(24).fill(0);
-        compMap = Object.create(null);
-        qs.forEach(d=>{
-          const it=d.data();
-          const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
-          const h=(ts instanceof Date) ? ts.getHours() : 0;
-          const wml = Math.max(0, it.water_ml ?? Math.round((it.ml||0) * (it.factor||1)));
-          if (h>=0 && h<24) hourData[h] += wml;
-          const key = it.beverage || 'unknown';
-          compMap[key] = (compMap[key]||0) + wml;
-        });
-        renderHourChart();
-        drawDonut();
-      });
-    }
-
-    // ===== Первичный запуск =====
+    // ===== Первичный рендер напитков =====
     renderBeverages(); updateFactorHint();
   </script>
 </body>
