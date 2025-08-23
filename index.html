@@ -70,16 +70,6 @@
     .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
     .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
     .ach.locked{opacity:.6;filter:grayscale(0.4)}
-      /* График по часам */
-    .hour-chart{display:flex;gap:4px;align-items:flex-end;height:140px;margin-top:8px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
-    .hour-bar{flex:1;min-width:0;height:6px;border-radius:6px 6px 0 0;background:linear-gradient(180deg, rgba(34,211,238,.8), rgba(96,165,250,.6));transition:height .35s ease}
-    .hour-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
-    /* Ачивки */
-    .ach-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
-    @media(max-width:520px){.ach-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(2,6,23,.45)}
-    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
-    .ach.locked{opacity:.6;filter:grayscale(0.4)}
   </style>
 </head>
 <body>
@@ -265,32 +255,8 @@
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
     // График по часам
-    const hourChart = document.getElementById('hourChart');
-    let hourData = new Array(24).fill(0);
 
     // Ачивки
-    const achGrid = document.getElementById('achievements');
-    const ACH_DEFS = [
-      { id:'first_liter', name:'Первый литр', desc:'1 л за день', icon:'💧' },
-      { id:'goal_today', name:'Цель достигнута', desc:'Выполнить дневную цель', icon:'🎯' },
-      { id:'streak_3', name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
-      { id:'streak_7', name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
-    ];
-    let unlocked = new Set();
-
-    // График
-    const hourChart = document.getElementById('hourChart');
-    let hourData = new Array(24).fill(0);
-
-    // Ачивки
-    const achGrid = document.getElementById('achievements');
-    const ACH_DEFS = [
-      { id:'first_liter', name:'Первый литр', desc:'1 л за день', icon:'💧' },
-      { id:'goal_today', name:'Цель достигнута', desc:'Выполнить дневную цель', icon:'🎯' },
-      { id:'streak_3', name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
-      { id:'streak_7', name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
-    ];
-    let unlocked = new Set();
 
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
@@ -349,7 +315,6 @@
     signOutBtn.addEventListener('click', async () => { await signOut(auth); });
 
     let unsubMyDaily = null, unsubLB = null, unsubUserDoc = null;
-    let unsubAch = null, unsubIntakes = null;
     let unsubAch = null, unsubIntakes = null;
     const cleanupSubscriptions = () => {
       if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; }
