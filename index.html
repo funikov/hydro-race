@@ -321,6 +321,8 @@
     addChips.forEach(btn => btn.addEventListener('click', () => addAmount(parseInt(btn.dataset.add, 10))));
     addCustomBtn.addEventListener('click', () => { const v = parseInt(customInput.value, 10); if (!Number.isFinite(v) || v === 0) { toast('Введите количество мл (не 0)'); return; } addAmount(v); customInput.value=''; });
     undoBtn.addEventListener('click', undoLast);
+    // Подписка на клики по вкладкам
+    tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.scope)));
 
     function toast(msg){ lastActionEl.textContent = msg; lastActionEl.classList.add('success'); setTimeout(()=>{ lastActionEl.textContent=''; lastActionEl.classList.remove('success'); }, 2500); }
 
@@ -338,7 +340,11 @@
     }
 
     function activateTab(scope){
-      tabs.forEach(t => t.classList.toggle('active', t.dataset.scope === scope));
+      tabs.forEach(t => {
+        const isActive = t.dataset.scope === scope;
+        t.classList.toggle('active', isActive);
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
       if (unsubLB) { unsubLB(); unsubLB=null; }
       const now = new Date();
       const { dateStr, monthStr, yearStr } = keysFor(now);
