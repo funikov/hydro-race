@@ -24,10 +24,10 @@
     .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
 
-    main{max-width:1200px;margin:18px auto;padding:0 16px}
-    /* Главная сетка: 2 колонки — слева «Мой день», справа обёртка */
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
-    @media(max-width:1024px){.grid{grid-template-columns:1fr}}
+    /* ⬇️ Вернул прежнюю ширину контейнера и пропорции колонок */
+    main{max-width:1100px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    @media(max-width:960px){.grid{grid-template-columns:1fr}}
 
     .card{background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:clip}
     .card::after{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);filter:blur(20px)}
@@ -97,8 +97,10 @@
 
     /* Правая колонка-обёртка */
     .rightcol{display:flex;flex-direction:column;gap:18px}
+
+    /* ⬇️ Аналитика и пончик: на широких — рядом, но аналитика шире */
     .right-two{display:grid;grid-template-columns:1fr;gap:18px}
-    @media(min-width:1024px){ .right-two{ grid-template-columns:1fr 1fr } }
+    @media(min-width:1200px){ .right-two{ grid-template-columns:1.35fr .65fr } }
 
     /* Пончик */
     .donut-wrap{position:relative;display:grid;grid-template-columns:auto 1fr;gap:14px}
@@ -205,7 +207,7 @@
           <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
         </section>
 
-        <!-- Две панели рядом на широком экране -->
+        <!-- Две панели: на широких — рядом, аналитика шире -->
         <div class="right-two">
           <!-- АНАЛИТИКА СЕГОДНЯ -->
           <section class="card" aria-labelledby="insightsTitle">
@@ -256,7 +258,7 @@
     </div>
   </main>
 
-  <footer style="max-width:1200px;margin:26px auto 60px;padding:0 16px;" class="muted">
+  <footer style="max-width:1100px;margin:26px auto 60px;padding:0 16px;" class="muted">
     Один HTML-файл на Firebase + Firestore. Индикатор прогресса, рейтинг и аналитика считают воду-эквивалент. Пончик показывает доли напитков за сегодня.
   </footer>
 
@@ -312,7 +314,6 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    // === Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -322,14 +323,12 @@
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
 
-    // === Init
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    // === Icons + beverages
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -456,7 +455,7 @@
       }
     });
 
-    // tabs click handlers
+    // tabs
     if (!window.__tabsBound) {
       tabs.forEach(tab => {
         tab.addEventListener('click', () => activateTab(tab.dataset.scope));
@@ -570,7 +569,7 @@
       toast('Последнее действие отменено');
     }
 
-    // График по часам + сетка
+    // График по часам
     const hourChart = document.getElementById('hourChart');
     const hourEmpty = document.getElementById('hourEmpty');
     const yTicksEl  = document.getElementById('yTicks');
@@ -583,7 +582,7 @@
       const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
       unsubIntakes = onSnapshot(qy, (qs)=>{
         hourData = new Array(24).fill(0);
-        compMap = Object.create(null); // обнуляем состав
+        compMap = Object.create(null);
         qs.forEach(d=>{
           const it=d.data();
           const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
@@ -605,7 +604,7 @@
       const base = raw / pow;
       let mult = 1; if (base<=1) mult=1; else if (base<=2) mult=2; else if (base<=5) mult=5; else mult=10;
       let step = mult * pow;
-      step = Math.max(50, Math.round(step/50)*50); // кратно 50 мл
+      step = Math.max(50, Math.round(step/50)*50);
       return step;
     }
     function renderYAxis(niceMax, step){
@@ -731,6 +730,16 @@
       }
     }
 
+    const monthTableBody  = document.getElementById('monthTableBody');
+    const openMonthDailyBtn = document.getElementById('openMonthDailyBtn');
+    const sumWaterEl = document.getElementById('sumWater');
+    const sumTotalEl = document.getElementById('sumTotal');
+    const sumShareEl = document.getElementById('sumShare');
+    const monthModal = document.getElementById('monthModal');
+    const monthCloseBtn = document.getElementById('monthCloseBtn');
+    const monthTitle = document.getElementById('monthTitle');
+    const monthSubTitle = document.getElementById('monthSubTitle');
+
     openMonthDailyBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
       const now = new Date();
@@ -758,10 +767,8 @@
     monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
     monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
 
-    /* ====== ПОНЧИК: расчёт и отрисовка ====== */
-    const PALETTE = [
-      '#7dd3fc', '#60a5fa', '#a78bfa', '#f472b6', '#fca5a5', '#fcd34d', '#86efac', '#67e8f9'
-    ];
+    /* ====== ПОНЧИК ====== */
+    const PALETTE = ['#7dd3fc','#60a5fa','#a78bfa','#f472b6','#fca5a5','#fcd34d','#86efac','#67e8f9'];
     let compMap = Object.create(null); // key -> water_ml
 
     function drawDonut(){
@@ -783,8 +790,7 @@
       donutEmpty.style.display = total>0 ? 'none':'block';
       donutLegend.innerHTML = '';
 
-      // Пусто — рисуем легкий фон-кольцо
-      const cx = W/2, cy = H/2, R = 100, r = 66; // внешний и внутренний радиусы
+      const cx = W/2, cy = H/2, R = 100, r = 66;
       if (total <= 0){
         ctx.globalAlpha = .18;
         ctx.beginPath();
@@ -797,15 +803,13 @@
         return;
       }
 
-      // Сегменты
       let start = -Math.PI/2;
-      const gap = 0.02; // зазор между сегментами
+      const gap = 0.02;
       entries.sort((a,b)=>b[1]-a[1]).forEach(([key,val],i)=>{
         const frac = val/total;
-        const ang  = Math.max(0.04, frac * Math.PI*2) - gap; // минимум видимый сегмент
+        const ang  = Math.max(0.04, frac * Math.PI*2) - gap;
         const end  = start + ang;
 
-        // путь пончика: внешний по часовой → внутренний обратно
         ctx.beginPath();
         ctx.arc(cx,cy,R,start,end);
         ctx.arc(cx,cy,r,end,start,true);
@@ -816,7 +820,6 @@
         start = end + gap;
       });
 
-      // Легенда
       entries.forEach(([key,val],i)=>{
         const bev = BEV_BY_KEY[key] || { name: key };
         const node = document.createElement('div');
