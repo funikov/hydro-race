@@ -24,7 +24,7 @@
     .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
 
-    /* ⬇️ Вернул прежнюю ширину контейнера и пропорции колонок */
+    /* Макет */
     main{max-width:1100px;margin:18px auto;padding:0 16px}
     .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
     @media(max-width:960px){.grid{grid-template-columns:1fr}}
@@ -97,8 +97,6 @@
 
     /* Правая колонка-обёртка */
     .rightcol{display:flex;flex-direction:column;gap:18px}
-
-    /* ⬇️ Аналитика и пончик: на широких — рядом, но аналитика шире */
     .right-two{display:grid;grid-template-columns:1fr;gap:18px}
     @media(min-width:1200px){ .right-two{ grid-template-columns:1.35fr .65fr } }
 
@@ -112,6 +110,14 @@
     .legend-item{display:flex;align-items:center;gap:10px;font-size:14px}
     .legend-dot{width:10px;height:10px;border-radius:50%}
     .legend-sub{color:var(--muted);font-size:12px}
+
+    /* Модалка таблицы месяца */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10000}
+    .modal{width:min(880px,92vw);max-height:80vh;overflow:auto;background:#0b1220;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.16);text-align:right}
+    .table th:first-child,.table td:first-child{text-align:left}
+    .tfoot td{font-weight:800}
   </style>
 </head>
 <body>
@@ -187,7 +193,7 @@
         <div class="muted" style="margin-top:6px">Можно добавлять отрицательные значения (например, -250) для коррекции.</div>
       </section>
 
-      <!-- ПРАВАЯ КОЛОНКА (обёртка для правых панелей) -->
+      <!-- ПРАВАЯ КОЛОНКА -->
       <div class="rightcol">
         <!-- ТАБЛИЦА ЛИДЕРОВ -->
         <section class="card" aria-labelledby="lbTitle">
@@ -207,9 +213,8 @@
           <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
         </section>
 
-        <!-- Две панели: на широких — рядом, аналитика шире -->
+        <!-- АНАЛИТИКА + ПОНЧИК -->
         <div class="right-two">
-          <!-- АНАЛИТИКА СЕГОДНЯ -->
           <section class="card" aria-labelledby="insightsTitle">
             <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
               <h2 id="insightsTitle">Аналитика сегодня</h2>
@@ -231,7 +236,6 @@
             <div id="achievements" class="ach-grid"></div>
           </section>
 
-          <!-- ПАНЕЛЬ ПОНЧИКА -->
           <section class="card" aria-labelledby="donutTitle">
             <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
               <h2 id="donutTitle">Состав напитков (сегодня)</h2>
@@ -351,7 +355,7 @@
     ];
     const BEV_BY_KEY = Object.fromEntries(BEVERAGES.map(b=>[b.key,b]));
 
-    // --- UI refs
+    /* === UI refs === */
     const signInBtn = document.getElementById('signInBtn');
     const signOutBtn= document.getElementById('signOutBtn');
     const userInfoEl= document.getElementById('userInfo');
@@ -379,12 +383,12 @@
     // Progress
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
-    const goalPercent = document.getElementById('goalPercent');
+    aconst goalPercent = document.getElementById('goalPercent');
     const goalInput   = document.getElementById('goalInput');
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
 
-    // Month modal
+    // Month modal (единожды!)
     const monthModal      = document.getElementById('monthModal');
     const monthCloseBtn   = document.getElementById('monthCloseBtn');
     const monthTitle      = document.getElementById('monthTitle');
@@ -455,7 +459,7 @@
       }
     });
 
-    // tabs
+    // tabs click handlers
     if (!window.__tabsBound) {
       tabs.forEach(tab => {
         tab.addEventListener('click', () => activateTab(tab.dataset.scope));
@@ -569,7 +573,7 @@
       toast('Последнее действие отменено');
     }
 
-    // График по часам
+    // График по часам + сетка
     const hourChart = document.getElementById('hourChart');
     const hourEmpty = document.getElementById('hourEmpty');
     const yTicksEl  = document.getElementById('yTicks');
@@ -582,7 +586,7 @@
       const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
       unsubIntakes = onSnapshot(qy, (qs)=>{
         hourData = new Array(24).fill(0);
-        compMap = Object.create(null);
+        compMap = Object.create(null); // состав для пончика
         qs.forEach(d=>{
           const it=d.data();
           const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
@@ -604,7 +608,7 @@
       const base = raw / pow;
       let mult = 1; if (base<=1) mult=1; else if (base<=2) mult=2; else if (base<=5) mult=5; else mult=10;
       let step = mult * pow;
-      step = Math.max(50, Math.round(step/50)*50);
+      step = Math.max(50, Math.round(step/50)*50); // кратно 50 мл
       return step;
     }
     function renderYAxis(niceMax, step){
@@ -729,16 +733,6 @@
         return Promise.all(promises);
       }
     }
-
-    const monthTableBody  = document.getElementById('monthTableBody');
-    const openMonthDailyBtn = document.getElementById('openMonthDailyBtn');
-    const sumWaterEl = document.getElementById('sumWater');
-    const sumTotalEl = document.getElementById('sumTotal');
-    const sumShareEl = document.getElementById('sumShare');
-    const monthModal = document.getElementById('monthModal');
-    const monthCloseBtn = document.getElementById('monthCloseBtn');
-    const monthTitle = document.getElementById('monthTitle');
-    const monthSubTitle = document.getElementById('monthSubTitle');
 
     openMonthDailyBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
