@@ -6,12 +6,7 @@
   <title>Водная битва — ежедневное соревнование по воде</title>
 
   <style>
-    :root {
-      --bg1:#090d1d; --bg2:#0f172a; --border:rgba(148,163,184,.16);
-      --muted:#94a3b8; --text:#e5e7eb; --brand:#22d3ee; --brand2:#60a5fa;
-      --good:#34d399; --danger:#f87171; --shadow:0 20px 40px rgba(0,0,0,.35);
-      --radius:18px;
-    }
+    :root { --bg1:#090d1d; --bg2:#0f172a; --border:rgba(148,163,184,.16); --muted:#94a3b8; --text:#e5e7eb; --brand:#22d3ee; --brand2:#60a5fa; --shadow:0 20px 40px rgba(0,0,0,.35); --radius:18px; }
     *{box-sizing:border-box} html,body{height:100%}
     body{
       margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial;
@@ -20,25 +15,12 @@
                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
       color:var(--text)
     }
-    header{
-      position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;
-      padding:14px 18px;background:rgba(8,14,28,.55);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)
-    }
+    header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;background:rgba(8,14,28,.55);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
     .brand{display:flex;gap:12px;align-items:center}
-    .drop{
-      width:30px;height:30px;border-radius:10px;
-      background:radial-gradient(circle at 30% 20%, #7dd3fc, transparent 35%),
-                 radial-gradient(circle at 60% 60%, #22d3ee, transparent 40%),
-                 radial-gradient(circle at 70% 30%, #60a5fa, transparent 45%);
-      box-shadow:inset 0 0 14px rgba(255,255,255,.25),0 8px 22px rgba(34,211,238,.35)
-    }
+    .drop{width:30px;height:30px;border-radius:10px;background:radial-gradient(circle at 30% 20%, #7dd3fc, transparent 35%),radial-gradient(circle at 60% 60%, #22d3ee, transparent 40%),radial-gradient(circle at 70% 30%, #60a5fa, transparent 45%);box-shadow:inset 0 0 14px rgba(255,255,255,.25),0 8px 22px rgba(34,211,238,.35)}
     .title{font-weight:800}.subtitle{font-size:12px;color:var(--muted)}
     .row{display:flex;gap:12px;align-items:center}
-    .btn{
-      border:0;color:#06111c;background:linear-gradient(180deg, var(--brand) 0%, #1bc0d9 100%);
-      padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:800;letter-spacing:.3px;
-      box-shadow:0 6px 16px rgba(34,211,238,.35);transition:transform .08s ease, filter .2s ease
-    }
+    .btn{border:0;color:#06111c;background:linear-gradient(180deg, var(--brand) 0%, #1bc0d9 100%);padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:800;letter-spacing:.3px;box-shadow:0 6px 16px rgba(34,211,238,.35);transition:transform .08s ease, filter .2s ease}
     .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
 
@@ -46,29 +28,15 @@
     .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
     @media(max-width:960px){.grid{grid-template-columns:1fr}}
 
-    .card{
-      background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));
-      border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
-      padding:18px;position:relative;overflow:clip
-    }
-    .card::after{
-      content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);
-      background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),
-                 radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);
-      filter:blur(20px)
-    }
+    .card{background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:clip}
+    .card::after{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);filter:blur(20px)}
     h2{margin:0 0 10px 0;font-size:20px}
-    .stat{display:flex;align-items:baseline;gap:10px}
-    .stat .big{font-size:44px;font-weight:900;letter-spacing:.3px}
+    .stat{display:flex;align-items:baseline;gap:10px}.stat .big{font-size:44px;font-weight:900;letter-spacing:.3px}
     .unit{color:var(--muted)} .muted{color:var(--muted);font-size:13px}
 
     .chipbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 10px}
-    .chip{
-      border:1px dashed rgba(148,163,184,.35);color:var(--text);background:rgba(2,6,23,.45);
-      padding:10px 14px;border-radius:12px;cursor:pointer;transition:border-color .2s ease, transform .08s ease
-    }
+    .chip{border:1px dashed rgba(148,163,184,.35);color:var(--text);background:rgba(2,6,23,.45);padding:10px 14px;border-radius:12px;cursor:pointer;transition:border-color .2s ease, transform .08s ease}
     .chip:hover{border-color:rgba(148,163,184,.6)} .chip:active{transform:translateY(1px)}
-
     .custom-add{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     input[type=number]{width:140px;background:#0a0f1d;color:var(--text);border:1px solid rgba(148,163,184,.28);border-radius:12px;padding:10px 12px}
 
@@ -79,10 +47,7 @@
     /* Напитки */
     .bev-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 14px}
     @media(max-width:520px){.bev-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    .bev{
-      display:grid;place-items:center;gap:6px;padding:12px 8px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(2,6,23,.45);cursor:pointer;text-align:center;transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease
-    }
+    .bev{display:grid;place-items:center;gap:6px;padding:12px 8px;border-radius:14px;border:1px solid var(--border);background:rgba(2,6,23,.45);cursor:pointer;text-align:center;transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease}
     .bev:hover{border-color:rgba(148,163,184,.35)} .bev.selected{border-color:rgba(34,211,238,.8);box-shadow:0 0 0 2px rgba(34,211,238,.25) inset}
     .bev .icon{width:28px;height:28px} .bev .name{font-size:12px;color:var(--text)}
 
@@ -105,17 +70,20 @@
     @keyframes splash{0%{transform:translate(0,0) scale(.85);opacity:.95}80%{opacity:1}100%{transform:translate(var(--dx), var(--dy)) scale(.2);opacity:0}}
     @keyframes ripple{to{transform:translate(-50%,-50%) scale(4.2);opacity:0}}
 
-    /* График по часам */
+    /* График по часам + ось Y + сетка */
     .hour-wrap{display:flex;gap:8px;align-items:flex-end}
     .y-axis{position:relative;height:140px;width:40px;margin-top:8px}
     .y-axis .ylabel{position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);writing-mode:vertical-rl;transform:rotate(180deg)}
     .yticks{position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:11px;color:var(--muted)}
     .yticks .tick{line-height:1}
     .hour-chart{
-      flex:1; /* растягиваемся рядом с осью Y */
+      position:relative;
+      flex:1;
       display:flex;gap:4px;align-items:flex-end;height:140px;margin-top:8px;padding:10px;
       border:1px solid var(--border);border-radius:12px;background:#0b1220
     }
+    .hgrid{position:absolute;inset:10px;pointer-events:none}
+    .hgrid .line{position:absolute;left:0;right:0;height:1px;background:rgba(148,163,184,.14)}
     .hour-bar{flex:1;min-width:0;height:8px;border-radius:6px 6px 0 0;background:linear-gradient(180deg, rgba(34,211,238,.9), rgba(96,165,250,.65));transition:height .35s ease}
     .hour-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px}
 
@@ -149,7 +117,7 @@
 
   <main id="app" class="hidden">
     <div class="grid">
-      <!-- ЛЕВО: мой день + график + ачивки -->
+      <!-- ЛЕВАЯ КОЛОНКА -->
       <section class="card" aria-labelledby="myDayTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="myDayTitle">Мой день</h2>
@@ -192,20 +160,6 @@
           <button class="chip" data-add="1500">+ бутылка 1,5 л</button>
         </div>
 
-        <div class="muted" style="margin-top:10px">Гидратация по часам (сегодня)</div>
-        <div class="hour-wrap">
-          <div class="y-axis">
-            <div class="ylabel">мл</div>
-            <div id="yTicks" class="yticks"></div>
-          </div>
-          <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
-        </div>
-        <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
-        <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
-
-        <div class="muted" style="margin-top:12px">Ачивки</div>
-        <div id="achievements" class="ach-grid"></div>
-
         <div class="custom-add" style="margin-top:10px">
           <input id="customInput" type="number" min="1" step="1" placeholder="Другое, мл" />
           <button class="btn" id="addCustomBtn">Добавить</button>
@@ -214,7 +168,7 @@
         <div class="muted" style="margin-top:6px">Можно добавлять отрицательные значения (например, -250) для коррекции.</div>
       </section>
 
-      <!-- ПРАВО: лидерборд -->
+      <!-- ПРАВАЯ КОЛОНКА: ЛИДЕРБОРД -->
       <section class="card" aria-labelledby="lbTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="lbTitle">Таблица лидеров</h2>
@@ -228,11 +182,33 @@
         <div class="lb-list" id="lbList" aria-live="polite"></div>
         <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
       </section>
+
+      <!-- ПРАВАЯ КОЛОНКА: АНАЛИТИКА -->
+      <section class="card" aria-labelledby="insightsTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="insightsTitle">Аналитика сегодня</h2>
+          <div class="muted">по воде-эквиваленту</div>
+        </div>
+
+        <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
+        <div class="hour-wrap">
+          <div class="y-axis">
+            <div class="ylabel">мл</div>
+            <div id="yTicks" class="yticks"></div>
+          </div>
+          <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
+        </div>
+        <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+        <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
+
+        <div class="muted" style="margin-top:14px">Ачивки</div>
+        <div id="achievements" class="ach-grid"></div>
+      </section>
     </div>
   </main>
 
   <footer style="max-width:1100px;margin:26px auto 60px;padding:0 16px;" class="muted">
-    Один HTML-файл на Firebase + Firestore. Индикатор прогресса и рейтинг считают воду-эквивалент. Ачивки и график — внутри «Мой день».
+    Один HTML-файл на Firebase + Firestore. Индикатор прогресса и рейтинг считают воду-эквивалент. Ачивки и график — в отдельной панели «Аналитика сегодня».
   </footer>
 
   <template id="lbRowTpl">
@@ -253,7 +229,7 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    // === Firebase config
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -263,14 +239,14 @@
       appId: "1:644586947662:web:ab1910e37b809a54616f1f"
     };
 
-    // === Init
+    // Init
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    // Icons + beverages + hydration factors
+    // Icons + beverages
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -292,7 +268,7 @@
       { key:'lemonade', name:'Лимонады',           factor: 0.90 },
     ];
 
-    // UI
+    // --- UI refs
     const signInBtn = document.getElementById('signInBtn');
     const signOutBtn= document.getElementById('signOutBtn');
     const userInfoEl= document.getElementById('userInfo');
@@ -325,74 +301,28 @@
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
 
-    function setRingProgress(ratio){
-      const clamped = Math.max(0, Math.min(1, ratio || 0));
-      goalFg.setAttribute('stroke-dasharray', String(CIRC));
-      goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped)));
-    }
-    function fitGoalText(){
-      const wrap = document.querySelector('.progress .inside');
-      if (!wrap || !goalNumbers) return;
-      goalNumbers.style.transform = 'scale(1)';
-      const maxW = Math.max(10, wrap.clientWidth - 12);
-      const w = goalNumbers.scrollWidth;
-      goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`;
-    }
-    window.addEventListener('resize', (()=>{ let t; return ()=>{ clearTimeout(t); t=setTimeout(fitGoalText,120);} })());
-    function updateProgressUI(water_ml){
-      const goal = Math.max(0, currentGoalMl || 0);
-      const ratio = goal > 0 ? water_ml / goal : 0;
-      setRingProgress(ratio);
-      goalNumbers.textContent = `${(water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} / ${(goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`;
-      goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`;
-      fitGoalText();
-    }
+    function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
+    function fitGoalText(){ const wrap = document.querySelector('.progress .inside'); if (!wrap || !goalNumbers) return; goalNumbers.style.transform = 'scale(1)'; const maxW = Math.max(10, wrap.clientWidth - 12); const w = goalNumbers.scrollWidth; goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`; }
+    window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(fitGoalText,120);}})());
+    function updateProgressUI(water_ml){ const goal = Math.max(0, currentGoalMl || 0); const ratio = goal > 0 ? water_ml / goal : 0; setRingProgress(ratio); goalNumbers.textContent = `${(water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} / ${(goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`; goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`; fitGoalText(); }
 
     // Beverages UI
     let currentBevKey = 'water';
-    function renderBeverages(){
-      bevGrid.innerHTML = '';
-      BEVERAGES.forEach(b => {
-        const btn = document.createElement('button');
-        btn.className = 'bev'+(b.key===currentBevKey?' selected':'');
-        btn.type='button'; btn.dataset.key=b.key;
-        btn.innerHTML = `${ICONS[b.key]||''}<div class="name">${b.name}</div>`;
-        const ic = btn.querySelector('.icon'); if (ic) ic.style.color = b.key==='water' ? '#7dd3fc' : '#cfe6ff';
-        btn.addEventListener('click', ()=>{ currentBevKey=b.key; updateFactorHint(); renderBeverages(); });
-        bevGrid.appendChild(btn);
-      });
-    }
-    function updateFactorHint(){
-      const bev = BEVERAGES.find(b=>b.key===currentBevKey);
-      factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`;
-    }
+    function renderBeverages(){ bevGrid.innerHTML = ''; BEVERAGES.forEach(b => { const btn = document.createElement('button'); btn.className='bev'+(b.key===currentBevKey?' selected':''); btn.type='button'; btn.dataset.key=b.key; btn.innerHTML = `${ICONS[b.key]||''}<div class="name">${b.name}</div>`; const ic = btn.querySelector('.icon'); if (ic) ic.style.color = b.key==='water' ? '#7dd3fc' : '#cfe6ff'; btn.addEventListener('click', ()=>{ currentBevKey=b.key; updateFactorHint(); renderBeverages(); }); bevGrid.appendChild(btn); }); }
+    function updateFactorHint(){ const bev = BEVERAGES.find(b=>b.key===currentBevKey); factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`; }
     renderBeverages(); updateFactorHint();
 
-    // Date helpers
+    // Dates
     const pad=(n)=>String(n).padStart(2,'0');
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
     todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'})}`;
 
     // Auth
-    signInBtn.addEventListener('click', async ()=>{
-      const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt:'select_account' });
-      try { await signInWithPopup(auth, provider); }
-      catch(e){
-        if (e?.code === 'auth/operation-not-supported-in-this-environment' || e?.code === 'auth/popup-blocked') {
-          await signInWithRedirect(auth, provider);
-        } else { alert('Ошибка входа: '+(e?.message||e)); }
-      }
-    });
+    signInBtn.addEventListener('click', async ()=>{ const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt:'select_account' }); try{ await signInWithPopup(auth, provider); }catch(e){ if (e?.code==='auth/operation-not-supported-in-this-environment' || e?.code==='auth/popup-blocked'){ await signInWithRedirect(auth, provider); } else { alert('Ошибка входа: '+(e?.message||e)); } }});
     signOutBtn.addEventListener('click', async ()=>{ await signOut(auth); });
 
     let unsubMyDaily=null, unsubLB=null, unsubUserDoc=null, unsubAch=null, unsubIntakes=null;
-    const cleanupSubscriptions=()=>{
-      if (unsubMyDaily){unsubMyDaily();unsubMyDaily=null}
-      if (unsubLB){unsubLB();unsubLB=null}
-      if (unsubUserDoc){unsubUserDoc();unsubUserDoc=null}
-      if (unsubAch){unsubAch();unsubAch=null}
-      if (unsubIntakes){unsubIntakes();unsubIntakes=null}
-    };
+    const cleanupSubscriptions=()=>{ if (unsubMyDaily){unsubMyDaily();unsubMyDaily=null} if (unsubLB){unsubLB();unsubLB=null} if (unsubUserDoc){unsubUserDoc();unsubUserDoc=null} if (unsubAch){unsubAch();unsubAch=null} if (unsubIntakes){unsubIntakes();unsubIntakes=null} };
 
     onAuthStateChanged(auth, async (user)=>{
       fitGoalText();
@@ -407,19 +337,15 @@
 
         unsubUserDoc = onSnapshot(userRef, async (snap)=>{
           const d = snap.data() || {};
-          if (typeof d.daily_goal_ml !== 'number'){
-            await setDoc(userRef, { daily_goal_ml: 3000 }, { merge:true });
-            currentGoalMl = 3000;
-          } else {
-            currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml)));
-          }
+          if (typeof d.daily_goal_ml !== 'number'){ await setDoc(userRef, { daily_goal_ml: 3000 }, { merge:true }); currentGoalMl = 3000; }
+          else { currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml))); }
           goalInput.value = (currentGoalMl/1000).toFixed(1);
           updateProgressUI(lastWaterMl);
         });
 
         subscribeMyDailyTotal();
         subscribeIntakesToday();
-        renderHourChart(); // пустое состояние
+        renderHourChart(); // пустое состояние/сетка
         subscribeAchievements();
         activateTab('day');
       } else {
@@ -440,12 +366,7 @@
       toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
     });
 
-    // Toast
-    function toast(msg){
-      lastActionEl.textContent = msg;
-      lastActionEl.classList.add('success');
-      setTimeout(()=>{ lastActionEl.textContent=''; lastActionEl.classList.remove('success'); }, 2500);
-    }
+    function toast(msg){ lastActionEl.textContent = msg; lastActionEl.classList.add('success'); setTimeout(()=>{ lastActionEl.textContent=''; lastActionEl.classList.remove('success'); }, 2500); }
 
     // Aggregations
     let lastWaterMl = 0;
@@ -492,35 +413,12 @@
 
     // Брызги
     const splashLayer = document.getElementById('splashLayer');
-    function splashAt(x,y,opts={}){
-      const count = opts.count || 14;
-      for(let i=0;i<count;i++){
-        const p = document.createElement('div'); p.className='splash-particle';
-        const angle=Math.random()*Math.PI*2; const dist=40+Math.random()*70;
-        const dx=Math.cos(angle)*dist; const dy=Math.sin(angle)*dist-10;
-        const size=6+Math.random()*8;
-        p.style.setProperty('--dx',dx+'px'); p.style.setProperty('--dy',dy+'px');
-        p.style.width=size+'px'; p.style.height=size+'px'; p.style.left=(x-size/2)+'px'; p.style.top=(y-size/2)+'px';
-        if (opts.neg){ p.style.background='radial-gradient(circle at 30% 30%, #fca5a5, #f87171 60%)'; p.style.filter='drop-shadow(0 6px 16px rgba(248,113,113,.25))'; }
-        splashLayer.appendChild(p); p.addEventListener('animationend',()=>p.remove());
-      }
-      const r=document.createElement('div'); r.className='splash-ripple'; r.style.left=x+'px'; r.style.top=y+'px';
-      if (opts.neg){ r.style.borderColor='rgba(248,113,113,.7)'; }
-      splashLayer.appendChild(r); r.addEventListener('animationend',()=>r.remove());
-    }
-    function splashNearTotal(neg){
-      const el=document.getElementById('myTotalWaterLiters'); const rect=el.getBoundingClientRect();
-      splashAt(rect.left+rect.width/2, rect.top+rect.height/2, {neg:!!neg, count:10});
-    }
+    function splashAt(x,y,opts={}){ const count = opts.count || 14; for(let i=0;i<count;i++){ const p=document.createElement('div'); p.className='splash-particle'; const angle=Math.random()*Math.PI*2; const dist=40+Math.random()*70; const dx=Math.cos(angle)*dist; const dy=Math.sin(angle)*dist-10; const size=6+Math.random()*8; p.style.setProperty('--dx',dx+'px'); p.style.setProperty('--dy',dy+'px'); p.style.width=size+'px'; p.style.height=size+'px'; p.style.left=(x-size/2)+'px'; p.style.top=(y-size/2)+'px'; if (opts.neg){ p.style.background='radial-gradient(circle at 30% 30%, #fca5a5, #f87171 60%)'; p.style.filter='drop-shadow(0 6px 16px rgba(248,113,113,.25))'; } splashLayer.appendChild(p); p.addEventListener('animationend',()=>p.remove()); } const r=document.createElement('div'); r.className='splash-ripple'; r.style.left=x+'px'; r.style.top=y+'px'; if (opts.neg){ r.style.borderColor='rgba(248,113,113,.7)'; } splashLayer.appendChild(r); r.addEventListener('animationend',()=>r.remove()); }
+    function splashNearTotal(neg){ const el=document.getElementById('myTotalWaterLiters'); const rect=el.getBoundingClientRect(); splashAt(rect.left+rect.width/2, rect.top+rect.height/2, {neg:!!neg, count:10}); }
 
     // Добавление / отмена
     addChips.forEach(btn=>btn.addEventListener('click',(e)=>{const ml=parseInt(btn.dataset.add,10); addAmount(ml); if(e && e.clientX!=null){ splashAt(e.clientX,e.clientY,{neg:ml<0}); }}));
-    document.getElementById('addCustomBtn').addEventListener('click', ()=>{
-      const v = parseInt(customInput.value,10);
-      if (!Number.isFinite(v) || v===0){ toast('Введите количество мл (не 0)'); return; }
-      addAmount(v); customInput.value='';
-      const r = addCustomBtn.getBoundingClientRect(); splashAt(r.left+r.width/2, r.top+r.height/2, {neg:v<0});
-    });
+    addCustomBtn.addEventListener('click', ()=>{ const v=parseInt(customInput.value,10); if (!Number.isFinite(v) || v===0){ toast('Введите количество мл (не 0)'); return; } addAmount(v); customInput.value=''; const r = addCustomBtn.getBoundingClientRect(); splashAt(r.left+r.width/2, r.top+r.height/2, {neg:v<0}); });
     undoBtn.addEventListener('click', undoLast);
 
     async function addAmount(ml){
@@ -559,10 +457,10 @@
       toast('Последнее действие отменено');
     }
 
-    // График по часам
+    // График по часам + сетка
     const hourChart = document.getElementById('hourChart');
     const hourEmpty = document.getElementById('hourEmpty');
-    const yTicksEl = document.getElementById('yTicks');
+    const yTicksEl  = document.getElementById('yTicks');
     let hourData = new Array(24).fill(0);
 
     function subscribeIntakesToday(){
@@ -593,17 +491,34 @@
       step = Math.max(50, Math.round(step/50)*50); // кратно 50 мл
       return step;
     }
+
     function renderYAxis(niceMax, step){
-      if (!yTicksEl) return;
-      const ticks = [];
-      for (let v = niceMax; v >= 0; v -= step) ticks.push(v);
-      yTicksEl.innerHTML = ticks.map(v=>`<div class="tick">${v}</div>`).join('');
+      // подписи слева
+      if (yTicksEl) {
+        const ticks = [];
+        for (let v = niceMax; v >= 0; v -= step) ticks.push(v);
+        yTicksEl.innerHTML = ticks.map(v=>`<div class="tick">${v}</div>`).join('');
+      }
+      // сетка внутри графика
+      if (hourChart) {
+        const inner = 120; // высота области столбиков (140 - padding*2)
+        const grid = document.createElement('div'); grid.className = 'hgrid';
+        for (let v = 0; v <= niceMax; v += step) {
+          const y = inner - Math.round((v/(niceMax||1)) * inner);
+          const line = document.createElement('div'); line.className = 'line'; line.style.top = y + 'px';
+          grid.appendChild(line);
+        }
+        hourChart.appendChild(grid);
+      }
     }
+
     function renderHourChart(){
       hourChart.innerHTML='';
       const total = hourData.reduce((a,b)=>a+b,0);
       if (hourEmpty) hourEmpty.style.display = total > 0 ? 'none' : 'block';
-      if (total <= 0) { renderYAxis(0, 50); return; }
+
+      const defaultMax = 1000, defaultStep = 250;
+      if (total <= 0) { renderYAxis(defaultMax, defaultStep); return; }
 
       const max = Math.max(1, ...hourData);
       const step = niceStep(max, 4);
@@ -628,27 +543,9 @@
       { id:'streak_7',    name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
     ];
     let unlocked = new Set();
-    function renderAchievements(){
-      achGrid.innerHTML='';
-      ACH_DEFS.forEach(a=>{
-        const has = unlocked.has(a.id);
-        const el=document.createElement('div'); el.className='ach'+(has?'':' locked');
-        el.innerHTML=`<div class="badge">${a.icon}</div><div style="font-size:12px;font-weight:700;">${a.name}</div><div class="muted" style="font-size:11px;text-align:center">${a.desc}</div>`;
-        achGrid.appendChild(el);
-      });
-    }
-    function subscribeAchievements(){
-      if (unsubAch) unsubAch();
-      const uid = auth.currentUser?.uid; if (!uid) return;
-      unsubAch = onSnapshot(collection(db,'users',uid,'achievements'), (qs)=>{
-        unlocked = new Set(qs.docs.map(d=>d.id));
-        renderAchievements();
-      });
-    }
-    async function recordAchievement(id,payload={}){
-      const uid=auth.currentUser?.uid; if (!uid || unlocked.has(id)) return;
-      await setDoc(doc(db,'users',uid,'achievements',id), { id, unlockedAt: serverTimestamp(), ...payload }, { merge:true });
-    }
+    function renderAchievements(){ achGrid.innerHTML=''; ACH_DEFS.forEach(a=>{ const has=unlocked.has(a.id); const el=document.createElement('div'); el.className='ach'+(has?'':' locked'); el.innerHTML=`<div class="badge">${a.icon}</div><div style="font-size:12px;font-weight:700;">${a.name}</div><div class="muted" style="font-size:11px;text-align:center">${a.desc}</div>`; achGrid.appendChild(el); }); }
+    function subscribeAchievements(){ if (unsubAch) unsubAch(); const uid=auth.currentUser?.uid; if (!uid) return; unsubAch = onSnapshot(collection(db,'users',uid,'achievements'), (qs)=>{ unlocked = new Set(qs.docs.map(d=>d.id)); renderAchievements(); }); }
+    async function recordAchievement(id,payload={}){ const uid=auth.currentUser?.uid; if (!uid || unlocked.has(id)) return; await setDoc(doc(db,'users',uid,'achievements',id), { id, unlockedAt: serverTimestamp(), ...payload }, { merge:true }); }
     function ymdShift(date,delta){ const dt=new Date(date); dt.setDate(dt.getDate()+delta); const y=dt.getFullYear(); const m=('0'+(dt.getMonth()+1)).slice(-2); const d=('0'+dt.getDate()).slice(-2); return `${y}-${m}-${d}`; }
     function onSnapshotOnce(ref){ return new Promise((resolve)=>{ const unsub=onSnapshot(ref,(snap)=>{ resolve(snap); unsub(); },{includeMetadataChanges:false}); }); }
     async function checkStreakAndAchievements(todayWater){
