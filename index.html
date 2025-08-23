@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fredoka:wght@400;600;800&family=Monoton&display=swap" rel="stylesheet">
 
   <style>
-    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ (будут переопределены темами) ===== */
+    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ (переопределяются темами) ===== */
     :root{
       --bg1:#0b0f1d;
       --bg2:#0f172a;
@@ -37,7 +37,7 @@
         linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
     }
 
-    /* ===== GROOVY THEME (60s psychedelic) ===== */
+    /* ===== GROOVY THEME ===== */
     body[data-theme="groovy"]{
       --bg1:#120019; --bg2:#03041c;
       --border:rgba(255,255,255,.14);
@@ -48,7 +48,6 @@
       --radius:20px;
       font-family:Fredoka, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto;
     }
-    /* Живой психоделический фон */
     body[data-theme="groovy"]::before{
       content:""; position:fixed; inset:-10% -10%; z-index:-1; pointer-events:none;
       background:
@@ -64,7 +63,7 @@
       100%{ transform:rotate(360deg) scale(1.02); filter:hue-rotate(0deg) saturate(140%);}
     }
 
-    /* ===== CLASSIC THEME (строгая тёмная) ===== */
+    /* ===== CLASSIC THEME ===== */
     body[data-theme="classic"]{
       --bg1:#090d1d; --bg2:#0f172a;
       --border:rgba(148,163,184,.16);
@@ -75,7 +74,6 @@
       --radius:18px;
       font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
     }
-    /* Убрать психоделику в классике */
     body[data-theme="classic"]::before{ content:none; }
     body[data-theme="classic"] .bev::after,
     body[data-theme="classic"] .card::before{ display:none; }
@@ -91,7 +89,7 @@
       background:
         radial-gradient(circle at 25% 25%, #fff8, transparent 35%),
         conic-gradient(from 220deg, var(--brand), var(--brand2), var(--brand));
-      box-shadow:inset 0 0 14px #fff3, 0 8px 22px color-mix(in oklab, var(--brand) 40%, transparent), 0 0 0 2px #ffffff22;
+      box-shadow:inset 0 0 14px #fff3, 0 8px 22px rgba(34,211,238,.35), 0 0 0 2px #ffffff22;
     }
     body[data-theme="groovy"] .drop{ width:38px;height:38px;border-radius:12px; animation:bob 3.8s ease-in-out infinite;}
     @keyframes bob{0%,100%{ transform:translateY(0) rotate(12deg)} 50%{ transform:translateY(-2px) rotate(8deg)}}
@@ -103,22 +101,22 @@
     /* Переключатель темы */
     .seg{display:inline-flex;gap:4px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:12px;padding:4px}
     .seg .segbtn{background:transparent;color:var(--text);border:0;padding:8px 12px;cursor:pointer;border-radius:10px;font-weight:800}
-    .seg .segbtn.active{background:linear-gradient(180deg, color-mix(in oklab, var(--brand) 24%, transparent), color-mix(in oklab, var(--brand2) 18%, transparent));}
+    .seg .segbtn.active{background:linear-gradient(180deg, rgba(34,211,238,.24), rgba(96,165,250,.18));}
+    body[data-theme="groovy"] .seg .segbtn.active{background:linear-gradient(180deg, rgba(0,255,209,.24), rgba(125,249,255,.18));}
 
     /* Кнопки */
     .btn{
-      border:0;color:#06111c;background:linear-gradient(180deg, var(--brand) 0%, color-mix(in oklab, var(--brand2) 86%, var(--brand) 14%));
-      padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:800;letter-spacing:.3px;box-shadow:0 6px 16px color-mix(in oklab, var(--brand) 35%, transparent);transition:transform .08s ease, filter .2s ease
+      border:0;color:#06111c;background:linear-gradient(180deg, var(--brand) 0%, var(--brand2) 86%);
+      padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:800;letter-spacing:.3px;box-shadow:0 6px 16px rgba(34,211,238,.35);transition:transform .08s ease, filter .2s ease
     }
     .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)}
     .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
-    /* Groovy-стиль кнопок поверх */
     body[data-theme="groovy"] .btn{
       color:#0c0b15;
       background:
         conic-gradient(from 210deg, #ffffffee, #ffffff99 45%, #ffffffee 60%),
         conic-gradient(from 0deg, var(--brand), var(--brand2), #ff6ad5, #ffd166, #a78bfa, var(--brand));
-      box-shadow:0 10px 22px color-mix(in oklab, var(--brand) 28%, transparent), 0 0 0 2px #00000022 inset;
+      box-shadow:0 10px 22px rgba(0,255,209,.28), 0 0 0 2px #00000022 inset;
     }
     body[data-theme="groovy"] .btn.secondary{
       color:var(--text);
@@ -145,12 +143,12 @@
     /* Карточки */
     .card{
       position:relative; overflow:clip;
-      background:linear-gradient(180deg, color-mix(in oklab, var(--brand) 6%, #1a1f31), #070b18);
+      background:linear-gradient(180deg, rgba(34,211,238,.06), #070b18);
       border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px; isolation:isolate;
     }
     body[data-theme="groovy"] .card{
       background:
-        radial-gradient(110% 180% at 120% -20%, color-mix(in oklab, var(--brand) 12%, transparent), transparent 50%),
+        radial-gradient(110% 180% at 120% -20%, rgba(0,255,209,.12), transparent 50%),
         radial-gradient(120% 160% at -10% -30%, #ff6ad51a, transparent 55%),
         linear-gradient(180deg, #1a0b3a, #07081b);
     }
@@ -161,7 +159,6 @@
         conic-gradient(from 0deg, #ff6ad5, var(--brand), #ffd166, var(--brand2), #a78bfa, #ff6ad5);
       filter:blur(18px) saturate(120%); opacity:.20; pointer-events:none; transform:rotate(-8deg); z-index:-1;
     }
-
     h2{margin:0 0 10px 0;font-size:20px}
     body[data-theme="groovy"] h2{font-size:22px;letter-spacing:.2px;text-shadow:0 1px 4px #0008}
 
@@ -170,12 +167,12 @@
 
     .chipbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 10px}
     .chip{
-      border:1px dashed color-mix(in oklab, var(--muted) 60%, transparent);
+      border:1px dashed rgba(148,163,184,.6);
       color:var(--text);
       background:linear-gradient(180deg, #111829, #0c1426);
       padding:10px 14px;border-radius:12px;cursor:pointer;transition:border-color .2s ease, transform .08s ease, filter .2s ease; box-shadow:inset 0 0 0 1px #ffffff10
     }
-    .chip:hover{border-color:color-mix(in oklab, var(--text) 40%, transparent)}
+    .chip:hover{border-color:rgba(255,255,255,.4)}
     .chip:active{transform:translateY(1px)}
     body[data-theme="groovy"] .chip{border-radius:16px;background:linear-gradient(180deg,#170d35,#0d0b26); box-shadow:inset 0 0 0 1px #ffffff10, 0 6px 16px #0006}
 
@@ -187,15 +184,14 @@
       background:linear-gradient(180deg,#192238,#0c1222);
       cursor:pointer;text-align:center;transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease; box-shadow:inset 0 0 0 1px #ffffff10
     }
-    .bev:hover{border-color:color-mix(in oklab, var(--muted) 60%, transparent)}
-    .bev.selected{border-color:color-mix(in oklab, var(--brand) 80%, transparent); box-shadow:0 0 0 2px color-mix(in oklab, var(--brand) 25%, transparent) inset}
+    .bev:hover{border-color:rgba(255,255,255,.4)}
+    .bev.selected{border-color:rgba(0,255,209,.8); box-shadow:0 0 0 2px rgba(0,255,209,.25) inset}
     .bev .icon{width:28px;height:28px}
     .bev .name{font-size:12px;color:var(--text)}
-    /* Groovy наклейка */
     body[data-theme="groovy"] .bev{
       background:
         radial-gradient(120% 120% at -20% -30%, #ff6ad512, transparent 50%),
-        radial-gradient(120% 140% at 120% 120%, var(--brand)11, transparent 55%),
+        radial-gradient(120% 140% at 120% 120%, rgba(0,255,209,.07), transparent 55%),
         linear-gradient(180deg,#1a0e3d,#0c0d26);
       border-radius:18px; box-shadow:0 10px 22px #0007, inset 0 0 0 1px #ffffff10;
     }
@@ -209,20 +205,20 @@
     .progress-wrap{display:flex;gap:18px;align-items:center;margin-top:6px;flex-wrap:wrap}
     .progress{position:relative;width:130px;height:130px}
     .progress svg{width:130px;height:130px;transform:rotate(-90deg)}
-    .progress .ring-bg{stroke:color-mix(in oklab, var(--muted) 18%, transparent);stroke-width:12;fill:none}
+    .progress .ring-bg{stroke:rgba(148,163,184,.18);stroke-width:12;fill:none}
     .progress .ring-fg{stroke:url(#ringGradient);stroke-linecap:round;stroke-width:12;fill:none;transition:stroke-dashoffset .5s ease}
     .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
     .progress .inside .big{font-weight:900;font-size:18px;display:inline-block;white-space:nowrap;transform-origin:center center}
 
     .goal-controls{display:flex;gap:8px;align-items:center}
-    input[type=number]{width:140px;background:#0a0f1d;color:var(--text);border:1px solid color-mix(in oklab, var(--muted) 40%, transparent);border-radius:12px;padding:10px 12px}
+    input[type=number]{width:140px;background:#0a0f1d;color:var(--text);border:1px solid rgba(148,163,184,.4);border-radius:12px;padding:10px 12px}
 
     .hidden{display:none!important}
 
     /* Брызги */
     #splashLayer{position:fixed;inset:0;pointer-events:none;z-index:9999}
-    .splash-particle{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%, var(--brand2), var(--brand) 60%);opacity:.95;filter:drop-shadow(0 6px 16px color-mix(in oklab, var(--brand) 35%, transparent));animation:splash 720ms ease-out forwards}
-    .splash-ripple{position:absolute;width:12px;height:12px;border:2px solid color-mix(in oklab, var(--brand) 80%, transparent);border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:.9;animation:ripple 650ms ease-out forwards}
+    .splash-particle{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%, var(--brand2), var(--brand) 60%);opacity:.95;filter:drop-shadow(0 6px 16px rgba(34,211,238,.35));animation:splash 720ms ease-out forwards}
+    .splash-ripple{position:absolute;width:12px;height:12px;border:2px solid rgba(34,211,238,.8);border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:.9;animation:ripple 650ms ease-out forwards}
     @keyframes splash{0%{transform:translate(0,0) scale(.85);opacity:.95}80%{opacity:1}100%{transform:translate(var(--dx), var(--dy)) scale(.2);opacity:0}}
     @keyframes ripple{to{transform:translate(-50%,-50%) scale(4.2);opacity:0}}
 
@@ -237,16 +233,16 @@
       border-radius:16px;
       background:
         radial-gradient(140% 180% at -20% -40%, #ff6ad50f, transparent 55%),
-        radial-gradient(120% 160% at 120% 140%, color-mix(in oklab, var(--brand) 10%, transparent), transparent 60%),
+        radial-gradient(120% 160% at 120% 140%, rgba(0,255,209,.10), transparent 60%),
         #0b0d24;
       box-shadow:inset 0 0 0 1px #ffffff10;
     }
     .hgrid{position:absolute;inset:10px;pointer-events:none}
-    .hgrid .line{position:absolute;left:0;right:0;height:1px;background:color-mix(in oklab, var(--muted) 22%, transparent)}
+    .hgrid .line{position:absolute;left:0;right:0;height:1px;background:rgba(148,163,184,.22)}
     .hour-bar{
       flex:1;min-width:0;height:8px;border-radius:8px 8px 0 0;
       background:linear-gradient(180deg, var(--barStart), var(--barEnd) 80%), linear-gradient(0deg, #ffffffaa, #ffffff00);
-      box-shadow:0 6px 16px color-mix(in oklab, var(--barStart) 25%, transparent);
+      box-shadow:0 6px 16px rgba(34,211,238,.25);
       transition:height .35s ease, filter .2s ease
     }
     .hour-bar:hover{filter:saturate(120%)}
@@ -257,7 +253,7 @@
     @media(max-width:520px){.ach-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,#11192d,#0d1426)}
     body[data-theme="groovy"] .ach{border-radius:16px;background:conic-gradient(from 0deg, #ffffff08, #ffffff12, #ffffff08), linear-gradient(180deg,#1a113d,#0d0d25); box-shadow:inset 0 0 0 1px #ffffff10, 0 10px 24px #0008;}
-    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px color-mix(in oklab, var(--brand) 25%, transparent)}
+    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
     body[data-theme="groovy"] .ach .badge{width:32px;height:32px;background:conic-gradient(from 0deg, var(--brand), var(--brand2), #ff6ad5, #ffd166, #a78bfa, var(--brand)); box-shadow:0 8px 20px rgba(255,255,255,.12), 0 0 0 2px #0003 inset;}
     .ach.locked{opacity:.65;filter:grayscale(.15) brightness(.95)}
 
@@ -322,7 +318,7 @@
           <div class="bev-grid" id="bevGrid" aria-label="Выбор напитка"></div>
           <div class="muted" id="factorHint"></div>
 
-          <!-- SVG-градиент для кольца прогресса -->
+          <!-- Градиент для кольца прогресса -->
           <svg width="0" height="0" style="position:absolute">
             <defs>
               <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -494,6 +490,7 @@
 
   <div id="splashLayer"></div>
 
+  <!-- ===================== APP SCRIPT ===================== -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -567,7 +564,7 @@
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
-    // Progress
+    // Прогресс
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
     const goalPercent = document.getElementById('goalPercent');
@@ -575,7 +572,7 @@
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
 
-    // Month modal
+    // Модалка месяц
     const monthModal      = document.getElementById('monthModal');
     const monthCloseBtn   = document.getElementById('monthCloseBtn');
     const monthTitle      = document.getElementById('monthTitle');
@@ -589,7 +586,7 @@
     // Donut refs
     const donutCanvas = document.getElementById('donutCanvas');
     const donutLegend = document.getElementById('donutLegend');
-    the const donutEmpty  = document.getElementById('donutEmpty');
+    const donutEmpty  = document.getElementById('donutEmpty');
     const donutTotalEl= document.getElementById('donutTotal');
 
     // Состав для пончика
@@ -605,10 +602,9 @@
       themeLabelEl.textContent = theme==='groovy' ? 'Groovy' : 'Classic';
     }
     function updateRingGradient(theme){
-      const getVar = (name)=>getComputedStyle(document.body).getPropertyValue(name).trim() || '#22d3ee';
       const s1=document.getElementById('rgStop1'), s2=document.getElementById('rgStop2'), s3=document.getElementById('rgStop3');
       if (theme==='groovy'){ s1.setAttribute('stop-color','#00ffd1'); s2.setAttribute('stop-color','#7df9ff'); s3.setAttribute('stop-color','#ffd166'); }
-      else { s1.setAttribute('stop-color', getVar('--brand')); s2.setAttribute('stop-color', getVar('--brand2')); s3.setAttribute('stop-color', getVar('--brand2')); }
+      else { s1.setAttribute('stop-color','#22d3ee'); s2.setAttribute('stop-color','#60a5fa'); s3.setAttribute('stop-color','#60a5fa'); }
     }
     async function applyTheme(theme, source='local'){
       if (theme!=='classic' && theme!=='groovy') theme='classic';
@@ -618,7 +614,6 @@
       setThemeButtons(theme);
       updateRingGradient(theme);
       try{ localStorage.setItem('theme', theme); }catch{}
-      // Сохраняем в профиль если залогинен и это не «remote»-применение
       const user = auth.currentUser;
       if (user && source!=='remote'){
         try{ await setDoc(doc(db,'users',user.uid), { theme }, { merge:true }); }catch(e){}
@@ -673,11 +668,7 @@
 
         unsubUserDoc = onSnapshot(userRef, async (snap)=>{
           const d = snap.data() || {};
-          // ТЕМА ИЗ ПРОФИЛЯ
-          if (d.theme && (d.theme==='classic' || d.theme==='groovy')) {
-            applyTheme(d.theme, 'remote'); // не перезаписываем в Firestore
-          }
-          // ЦЕЛЬ
+          if (d.theme && (d.theme==='classic' || d.theme==='groovy')) applyTheme(d.theme, 'remote');
           if (typeof d.daily_goal_ml !== 'number'){ await setDoc(userRef, { daily_goal_ml: 3000 }, { merge:true }); currentGoalMl = 3000; }
           else { currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml))); }
           goalInput.value = (currentGoalMl/1000).toFixed(1);
@@ -694,21 +685,17 @@
         appEl.classList.add('hidden');
         signInBtn.classList.remove('hidden'); signOutBtn.classList.add('hidden'); userInfoEl.classList.add('hidden');
         cleanupSubscriptions();
-        // для гостя — рендер напитков и тема из localStorage
         renderBeverages(); updateFactorHint();
       }
     });
 
     // ===== Таб-лидеров =====
-    if (!window.__tabsBound) {
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
-        tab.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
-        });
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => activateTab(tab.dataset.scope));
+      tab.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
       });
-      window.__tabsBound = true;
-    }
+    });
 
     function activateTab(scope){
       tabs.forEach(t=>{ const a=t.dataset.scope===scope; t.classList.toggle('active',a); t.setAttribute('aria-selected',a?'true':'false'); });
@@ -974,7 +961,7 @@
       }
     }
 
-    document.getElementById('openMonthDailyBtn').addEventListener('click', async ()=>{
+    openMonthDailyBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
       const now = new Date();
       const rows = await fetchMonthRowsSafe(user.uid, now.getFullYear(), now.getMonth());
@@ -998,12 +985,11 @@
       monthModal.style.display = 'flex';
     });
 
-    document.getElementById('monthCloseBtn').addEventListener('click', ()=>{ monthModal.style.display='none'; });
+    monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
     monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
 
     /* ===== Пончик ===== */
     const PALETTE = ['#00ffd1','#7df9ff','#ff6ad5','#ffd166','#a78bfa','#ff8fab','#8aff80','#f5a3ff'];
-    const donutEmpty = document.getElementById('donutEmpty');
 
     function drawDonut(){
       if (!donutCanvas) return;
@@ -1050,7 +1036,7 @@
       });
     }
 
-    /* ===== Save goal ===== */
+    /* ===== Сохранение цели ===== */
     saveGoalBtn.addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
       const liters = parseFloat(goalInput.value);
@@ -1064,10 +1050,6 @@
 
     // ===== Первичный рендер напитков =====
     renderBeverages(); updateFactorHint();
-
-    // ===== Интеграции подписок =====
-    function subscribeAchievements(){ if (unsubAch) unsubAch(); const uid=auth.currentUser?.uid; if (!uid) return; unsubAch = onSnapshot(collection(db,'users',uid,'achievements'), (qs)=>{ unlocked = new Set(qs.docs.map(d=>d.id)); renderAchievements(); }); }
-
   </script>
 </body>
 </html>
