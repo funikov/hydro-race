@@ -180,10 +180,13 @@
       <section class="card" aria-labelledby="lbTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="lbTitle">Таблица лидеров</h2>
-          <div class="tabs" role="tablist">
-            <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
-            <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
-            <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
+          <div class="row" style="gap:8px; flex-wrap:wrap;">
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-scope="day" role="tab" aria-selected="true">День</button>
+              <button class="tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
+              <button class="tab" data-scope="year" role="tab" aria-selected="false">Год</button>
+            </div>
+            <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
           </div>
         </div>
         <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
@@ -195,10 +198,7 @@
       <section class="card" aria-labelledby="insightsTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="insightsTitle">Аналитика сегодня</h2>
-          <div class="row" style="gap:8px;">
-            <div class="muted">по воде-эквиваленту</div>
-            <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
-          </div>
+          <div class="muted">по воде-эквиваленту</div>
         </div>
 
         <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
@@ -250,7 +250,7 @@
               <th>Дата</th>
               <th>Вода-экв., л</th>
               <th>Всего, л</th>
-              <th>Доля воды</th>
+              <th>К цели</th>
             </tr>
           </thead>
           <tbody id="monthTableBody"></tbody>
@@ -274,7 +274,7 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, signInWithRedirect, getRedirectResult } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-    // === Firebase config (исходный, без трюков)
+    // === Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
@@ -411,7 +411,7 @@
       }
     });
 
-    // tabs click handlers (на всякий)
+    // tabs click handlers
     if (!window.__tabsBound) {
       tabs.forEach(tab => {
         tab.addEventListener('click', () => activateTab(tab.dataset.scope));
@@ -636,17 +636,15 @@
 
     /* ====== Месяц по дням (таблица) ====== */
     function liters(n_ml){ return (n_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}); }
-    function share(w,t){ if (!t) return '—'; return Math.round((w/t)*100)+'%'; }
+    function goalPct(w, goalMl){ if (!goalMl) return '—'; return Math.round((w/goalMl)*100)+'%'; }
 
     async function fetchMonthRowsSafe(uid, year, monthIndex){
-      // подготовим пустые строки
       const monthStr = year + '-' + String(monthIndex+1).padStart(2,'0');
       const daysInMonth = new Date(year, monthIndex+1, 0).getDate();
       const rows = Array.from({length:daysInMonth}, (_,i)=>({
         day:i+1, dateStr: `${monthStr}-${String(i+1).padStart(2,'0')}`, total_water_ml:0, total_ml:0
       }));
 
-      // 1) пытаемся быстрым путём (collectionGroup) — может спросить индекс
       try{
         const startStr = `${monthStr}-01`;
         const endStr   = `${monthStr}-31`;
@@ -669,7 +667,6 @@
         });
         return rows;
       } catch(err){
-        // 2) фолбэк: по одному doc на день (до 31 запросов)
         const promises = rows.map(async (r)=>{
           const ref = doc(db,'daily_totals', r.dateStr, 'users', uid);
           const ds  = await getDoc(ref);
@@ -696,12 +693,12 @@
           <td>${new Date(r.dateStr).toLocaleDateString(undefined,{day:'2-digit', month:'short', weekday:'short'})}</td>
           <td>${liters(r.total_water_ml)}</td>
           <td>${liters(r.total_ml)}</td>
-          <td>${share(r.total_water_ml, r.total_ml)}</td>
+          <td>${goalPct(r.total_water_ml, currentGoalMl)}</td>
         </tr>`;
       }).join('');
       sumWaterEl.textContent = liters(sumW);
       sumTotalEl.textContent = liters(sumT);
-      sumShareEl.textContent = share(sumW,sumT);
+      sumShareEl.textContent = '—'; // суммарный % к цели не считаем
 
       monthTitle.textContent = 'Месяц по дням';
       monthSubTitle.textContent = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
