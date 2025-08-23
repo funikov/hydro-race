@@ -5,105 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Водная битва — ежедневное соревнование по воде</title>
   <!--
-  Обновление интерфейса 🎨:
-  - Иконки напитков вместо выпадающего списка (красивая сетка с выбором).
-  - Современные стили карточек, кнопок и вкладок.
-  - Всё как и раньше — один index.html, Firebase + Firestore.
+  Обновление 🎯:
+  - Круговой прогресс до дневной цели (по умолчанию 3.0 л), показывается как X/Y л и %.
+  - Каждый пользователь может задать свою цель; хранится в users.daily_goal_ml.
+  - Сохранены иконки напитков, брызги и весь функционал.
   -->
   <style>
-    :root {
-      --bg1: #090d1d; --bg2: #0f172a; --panel: rgba(17, 24, 39, .65);
-      --border: rgba(148, 163, 184, .16); --muted: #94a3b8; --text: #e5e7eb;
-      --brand: #22d3ee; --brand2: #60a5fa; --good: #34d399; --warn: #f59e0b; --danger: #f87171;
-      --card: rgba(11, 18, 32, .7); --shadow: 0 20px 40px rgba(0,0,0,.35); --radius: 18px;
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
-      background: radial-gradient(1200px 900px at 10% -10%, #0b122a, transparent),
-                  radial-gradient(900px 700px at 120% 10%, #0a3f5d, transparent),
-                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
-      color: var(--text);
-    }
-    header {
-      position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      padding: 14px 18px; background: rgba(8,14,28,.55); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
-    }
-    .brand { display: flex; gap: 12px; align-items: center; }
-    .drop { width: 30px; height: 30px; border-radius: 10px; background:
-      radial-gradient(circle at 30% 20%, #7dd3fc, transparent 35%),
-      radial-gradient(circle at 60% 60%, #22d3ee, transparent 40%),
-      radial-gradient(circle at 70% 30%, #60a5fa, transparent 45%);
-      box-shadow: inset 0 0 14px rgba(255,255,255,.25), 0 8px 22px rgba(34,211,238,.35);
-    }
-    .title { font-weight: 800; letter-spacing: .2px; }
-    .subtitle { font-size: 12px; color: var(--muted); }
-
-    .row { display: flex; gap: 12px; align-items: center; }
-    .btn {
-      border: 0; color: #06111c; background: linear-gradient(180deg, var(--brand) 0%, #1bc0d9 100%);
-      padding: 10px 16px; border-radius: 999px; cursor: pointer; font-weight: 800; letter-spacing: .3px;
-      box-shadow: 0 6px 16px rgba(34,211,238,.35);
-      transition: transform .08s ease, filter .2s ease;
-    }
-    .btn:hover { filter: brightness(1.05); }
-    .btn:active { transform: translateY(1px); }
-    .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); box-shadow: none; }
-
-    main { max-width: 1100px; margin: 18px auto; padding: 0 16px; }
-    .grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
-    @media (max-width: 960px){ .grid { grid-template-columns: 1fr; } }
-
-    .card {
-      background: linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));
-      border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 18px; position: relative; overflow: clip;
-    }
-    .card::after {
-      content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: calc(var(--radius) + 8px);
-      background: radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),
-                  radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);
-      filter: blur(20px);
-    }
-    h2 { margin: 0 0 10px 0; font-size: 20px; }
-
-    .stat { display: flex; align-items: baseline; gap: 10px; }
-    .stat .big { font-size: 44px; font-weight: 900; letter-spacing: .3px; }
-    .unit { color: var(--muted); }
-
-    .chipbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 10px; }
-    .chip {
-      border: 1px dashed rgba(148,163,184,.35); color: var(--text); background: rgba(2,6,23,.45);
-      padding: 10px 14px; border-radius: 12px; cursor: pointer; transition: border-color .2s ease, transform .08s ease;
-    }
-    .chip:hover { border-color: rgba(148,163,184,.6); }
-    .chip:active { transform: translateY(1px); }
-
-    .custom-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    input[type=number] { width: 140px; background: #0a0f1d; color: var(--text); border: 1px solid rgba(148,163,184,.28); border-radius: 12px; padding: 10px 12px; }
-
-    .tabs { display: inline-flex; gap: 4px; background: rgba(2,6,23,.45); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
-    .tab {
-      background: transparent; color: var(--text); border: 0; padding: 8px 12px; cursor: pointer; border-radius: 10px; font-weight: 700;
-      transition: background .2s ease, color .2s ease;
-    }
-    .tab.active { background: linear-gradient(180deg, rgba(34,211,238,.18), rgba(96,165,250,.12)); color: #e7fbff; }
+    :root { --bg1:#090d1d; --bg2:#0f172a; --border:rgba(148,163,184,.16); --muted:#94a3b8; --text:#e5e7eb; --brand:#22d3ee; --brand2:#60a5fa; --good:#34d399; --danger:#f87171; --shadow:0 20px 40px rgba(0,0,0,.35); --radius:18px; }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial;background:radial-gradient(1200px 900px at 10% -10%, #0b122a, transparent),radial-gradient(900px 700px at 120% 10%, #0a3f5d, transparent),linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);color:var(--text)}
+    header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;background:rgba(8,14,28,.55);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+    .brand{display:flex;gap:12px;align-items:center}.drop{width:30px;height:30px;border-radius:10px;background:radial-gradient(circle at 30% 20%, #7dd3fc, transparent 35%),radial-gradient(circle at 60% 60%, #22d3ee, transparent 40%),radial-gradient(circle at 70% 30%, #60a5fa, transparent 45%);box-shadow:inset 0 0 14px rgba(255,255,255,.25),0 8px 22px rgba(34,211,238,.35)}
+    .title{font-weight:800}.subtitle{font-size:12px;color:var(--muted)}
+    .row{display:flex;gap:12px;align-items:center}
+    .btn{border:0;color:#06111c;background:linear-gradient(180deg, var(--brand) 0%, #1bc0d9 100%);padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:800;letter-spacing:.3px;box-shadow:0 6px 16px rgba(34,211,238,.35);transition:transform .08s ease, filter .2s ease}
+    .btn:hover{filter:brightness(1.05)} .btn:active{transform:translateY(1px)} .btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
+    main{max-width:1100px;margin:18px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px} @media(max-width:960px){.grid{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg, rgba(96,165,250,.06), rgba(34,211,238,.05));border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;position:relative;overflow:clip}
+    .card::after{content:"";position:absolute;inset:-2px;z-index:-1;border-radius:calc(var(--radius) + 8px);background:radial-gradient(600px 400px at 0% -10%, rgba(34,211,238,.25), transparent 40%),radial-gradient(500px 420px at 120% 10%, rgba(96,165,250,.18), transparent 50%);filter:blur(20px)}
+    h2{margin:0 0 10px 0;font-size:20px}
+    .stat{display:flex;align-items:baseline;gap:10px}.stat .big{font-size:44px;font-weight:900;letter-spacing:.3px}.unit{color:var(--muted)} .muted{color:var(--muted);font-size:13px}
+    .chipbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 10px}
+    .chip{border:1px dashed rgba(148,163,184,.35);color:var(--text);background:rgba(2,6,23,.45);padding:10px 14px;border-radius:12px;cursor:pointer;transition:border-color .2s ease, transform .08s ease}
+    .chip:hover{border-color:rgba(148,163,184,.6)} .chip:active{transform:translateY(1px)}
+    .custom-add{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    input[type=number]{width:140px;background:#0a0f1d;color:var(--text);border:1px solid rgba(148,163,184,.28);border-radius:12px;padding:10px 12px}
+    .tabs{display:inline-flex;gap:4px;background:rgba(2,6,23,.45);border:1px solid var(--border);border-radius:12px;padding:4px}
+    .tab{background:transparent;color:var(--text);border:0;padding:8px 12px;cursor:pointer;border-radius:10px;font-weight:700;transition:background .2s ease, color .2s ease}
+    .tab.active{background:linear-gradient(180deg, rgba(34,211,238,.18), rgba(96,165,250,.12));color:#e7fbff}
 
     /* Сетка иконок напитков */
-    .bev-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin: 8px 0 14px; }
-    @media (max-width: 520px){ .bev-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    .bev {
-      display: grid; place-items: center; gap: 6px; padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border);
-      background: rgba(2,6,23,.45); cursor: pointer; text-align: center; transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
-    }
-    .bev:hover { border-color: rgba(148,163,184,.35); }
-    .bev.selected { outline: 0; border-color: rgba(34,211,238,.8); box-shadow: 0 0 0 2px rgba(34,211,238,.25) inset; }
-    .bev .icon { width: 28px; height: 28px; }
-    .bev .name { font-size: 12px; color: var(--text); }
-    .hint, .muted { color: var(--muted); font-size: 13px; }
-    .success { color: var(--good); font-weight: 700; }
-      /* Брызги 💦 */
+    .bev-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:8px 0 14px}
+    @media(max-width:520px){.bev-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    .bev{display:grid;place-items:center;gap:6px;padding:12px 8px;border-radius:14px;border:1px solid var(--border);background:rgba(2,6,23,.45);cursor:pointer;text-align:center;transition:transform .08s ease, box-shadow .2s ease, border-color .2s ease}
+    .bev:hover{border-color:rgba(148,163,184,.35)} .bev.selected{border-color:rgba(34,211,238,.8);box-shadow:0 0 0 2px rgba(34,211,238,.25) inset}
+    .bev .icon{width:28px;height:28px} .bev .name{font-size:12px;color:var(--text)}
+
+    /* Прогресс-виджет */
+    .progress-wrap{display:flex;gap:18px;align-items:center;margin-top:6px;flex-wrap:wrap}
+    .progress{position:relative;width:120px;height:120px}
+    .progress svg{width:120px;height:120px;transform:rotate(-90deg)}
+    .progress .ring-bg{stroke:rgba(148,163,184,.18);stroke-width:10;fill:none}
+    .progress .ring-fg{stroke:linear-gradient(180deg, var(--brand), var(--brand2));stroke:var(--brand);stroke-linecap:round;stroke-width:10;fill:none;transition:stroke-dashoffset .5s ease}
+    .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+    .progress .inside .big{font-weight:900;font-size:18px}
+    .goal-controls{display:flex;gap:8px;align-items:center}
+
+    .hidden{display:none!important}
+
+    /* Брызги 💦 */
     #splashLayer{position:fixed;inset:0;pointer-events:none;z-index:9999}
     .splash-particle{position:absolute;border-radius:50%;background:radial-gradient(circle at 30% 30%, #7dd3fc, #22d3ee 60%);opacity:.95;filter:drop-shadow(0 6px 16px rgba(34,211,238,.25));animation:splash 720ms ease-out forwards}
     .splash-ripple{position:absolute;width:12px;height:12px;border:2px solid rgba(34,211,238,.7);border-radius:50%;transform:translate(-50%,-50%) scale(.2);opacity:.9;animation:ripple 650ms ease-out forwards}
@@ -117,7 +68,7 @@
       <div class="drop" aria-hidden="true"></div>
       <div>
         <div class="title">Водная битва</div>
-        <div class="subtitle">Выберите напиток и добавляйте объём — считаем воду-эквивалент 💧</div>
+        <div class="subtitle">Выберите напиток — считаем воду-эквивалент и прогресс к цели 💧</div>
       </div>
     </div>
 
@@ -140,14 +91,34 @@
         </div>
 
         <div class="bev-grid" id="bevGrid" aria-label="Выбор напитка"></div>
-        <div class="hint" id="factorHint"></div>
+        <div class="muted" id="factorHint"></div>
 
-        <div class="stat" aria-live="polite" style="margin-top:6px;">
-          <div class="big" id="myTotalWaterLiters">0,0</div>
-          <div class="unit">л воды-экв.</div>
+        <div class="progress-wrap">
+          <div class="progress" aria-label="Прогресс к цели">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fg" id="goalFg" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327" />
+            </svg>
+            <div class="inside">
+              <div class="big" id="goalNumbers">0.0 / 3.0 л</div>
+              <div class="muted" id="goalPercent">0%</div>
+            </div>
+          </div>
+          <div>
+            <div class="stat" aria-live="polite">
+              <div class="big" id="myTotalWaterLiters">0,0</div>
+              <div class="unit">л воды-экв.</div>
+            </div>
+            <div class="muted" id="myRawTotal" style="margin-top:4px">Всего напитков: 0,0 л</div>
+            <div class="goal-controls" style="margin-top:10px">
+              <label for="goalInput" class="muted">Цель на день:</label>
+              <input id="goalInput" type="number" min="0.5" max="10" step="0.1" placeholder="л" style="width:90px" />
+              <span class="muted">л</span>
+              <button class="btn secondary" id="saveGoalBtn" title="Сохранить цель">Сохранить</button>
+            </div>
+            <div class="hint" id="lastAction" style="margin-top:6px"></div>
+          </div>
         </div>
-        <div class="muted" id="myRawTotal" style="margin-top:4px">Всего напитков: 0,0 л</div>
-        <div class="hint" id="lastAction" style="margin-top:6px"></div>
 
         <div class="chipbar" aria-label="Быстро добавить">
           <button class="chip" data-add="250">+ стакан (250 мл)</button>
@@ -174,13 +145,13 @@
         </div>
         <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
         <div class="lb-list" id="lbList" aria-live="polite"></div>
-        <div class="muted" style="margin-top:6px">Рейтинг строится по воде-эквиваленту; общий объём хранится отдельно.</div>
+        <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
       </section>
     </div>
   </main>
 
   <footer style="max-width:1100px;margin:26px auto 60px;padding:0 16px;" class="muted">
-    Один HTML‑файл на Firebase + Firestore. Напитки учитываются с коэффициентом гидратации.
+    Один HTML‑файл на Firebase + Firestore. Напитки учитываются с коэффициентом гидратации. Индикатор прогресса учитывает воду-эквивалент.
   </footer>
 
   <template id="lbRowTpl">
@@ -193,6 +164,8 @@
       <div class="amt am"></div>
     </div>
   </template>
+
+  <div id="splashLayer"></div>
 
   <script type="module">
     // Firebase SDK (modular)
@@ -239,7 +212,7 @@
       { key:'lemonade', name:'Лимонады',             factor: 0.90 },
     ];
 
-    // === Элементы UI
+    // === UI элементы
     const signInBtn = document.getElementById('signInBtn');
     const signOutBtn = document.getElementById('signOutBtn');
     const userInfoEl = document.getElementById('userInfo');
@@ -260,54 +233,18 @@
     const addCustomBtn = document.getElementById('addCustomBtn');
     const undoBtn = document.getElementById('undoBtn');
 
-    // Слой и функции анимации брызг
-    const splashLayer = document.getElementById('splashLayer');
-    function splashAt(x, y, opts = {}){
-      const count = opts.count || 14;
-      for(let i=0;i<count;i++){
-        const p = document.createElement('div');
-        p.className = 'splash-particle';
-        const angle = Math.random()*Math.PI*2;
-        const dist = 40 + Math.random()*70;
-        const dx = Math.cos(angle)*dist;
-        const dy = Math.sin(angle)*dist - 10;
-        const size = 6 + Math.random()*8;
-        p.style.setProperty('--dx', dx+'px');
-        p.style.setProperty('--dy', dy+'px');
-        p.style.width = size+'px';
-        p.style.height = size+'px';
-        p.style.left = (x - size/2)+'px';
-        p.style.top  = (y - size/2)+'px';
-        if (opts.neg){
-          p.style.background = 'radial-gradient(circle at 30% 30%, #fca5a5, #f87171 60%)';
-          p.style.filter = 'drop-shadow(0 6px 16px rgba(248,113,113,.25))';
-        }
-        splashLayer.appendChild(p);
-        p.addEventListener('animationend', function(){ p.remove(); });
-      }
-      const r = document.createElement('div');
-      r.className = 'splash-ripple';
-      r.style.left = x+'px';
-      r.style.top  = y+'px';
-      if (opts.neg){ r.style.borderColor = 'rgba(248,113,113,.7)'; }
-      splashLayer.appendChild(r);
-      r.addEventListener('animationend', function(){ r.remove(); });
-    }
-    function splashNearTotal(neg){
-      const el = document.getElementById('myTotalWaterLiters');
-      const rect = el.getBoundingClientRect();
-      const x = rect.left + rect.width/2;
-      const y = rect.top + rect.height/2;
-      splashAt(x, y, {neg: !!neg, count: 10});
-    }
-
     const lbListEl = document.getElementById('lbList');
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
+    const goalFg = document.getElementById('goalFg');
+    const goalNumbers = document.getElementById('goalNumbers');
+    const goalPercent = document.getElementById('goalPercent');
+    const goalInput = document.getElementById('goalInput');
+    const saveGoalBtn = document.getElementById('saveGoalBtn');
+
     const pad = (n)=>String(n).padStart(2,'0');
     const keysFor = (date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
-
     todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`;
 
     // === Рендер сетки напитков
@@ -320,7 +257,8 @@
         div.setAttribute('type','button');
         div.setAttribute('data-key', b.key);
         div.innerHTML = `${ICONS[b.key] || ''}<div class="name">${b.name}</div>`;
-        div.querySelector('.icon').style.color = b.key==='water' ? '#7dd3fc' : '#cfe6ff';
+        const ic = div.querySelector('.icon');
+        if (ic) ic.style.color = b.key==='water' ? '#7dd3fc' : '#cfe6ff';
         div.addEventListener('click', () => { currentBevKey = b.key; updateFactorHint(); renderBeverages(); });
         bevGrid.appendChild(div);
       });
@@ -334,6 +272,7 @@
     updateFactorHint();
 
     // === Авторизация
+    setPersistence(auth, browserLocalPersistence).catch(console.warn);
     signInBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt: 'select_account' });
       try { await signInWithPopup(auth, provider); }
@@ -341,8 +280,28 @@
     });
     signOutBtn.addEventListener('click', async () => { await signOut(auth); });
 
-    let unsubMyDaily = null, unsubLB = null;
-    const cleanupSubscriptions = () => { if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; } if (unsubLB) { unsubLB(); unsubLB=null; } };
+    let unsubMyDaily = null, unsubLB = null, unsubUserDoc = null;
+    const cleanupSubscriptions = () => { if (unsubMyDaily) { unsubMyDaily(); unsubMyDaily=null; } if (unsubLB) { unsubLB(); unsubLB=null; } if (unsubUserDoc){ unsubUserDoc(); unsubUserDoc=null; } };
+
+    let currentGoalMl = 3000; // по умолчанию 3.0 л
+    const CIRC = 2 * Math.PI * 52; // длина окружности для r=52 (~326.7)
+
+    function setRingProgress(ratio){
+      const clamped = Math.max(0, Math.min(1, ratio || 0));
+      // stroke-dasharray задан, меняем offset
+      goalFg.setAttribute('stroke-dasharray', String(CIRC));
+      goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped)));
+    }
+
+    function updateProgressUI(water_ml){
+      const goal = Math.max(0, currentGoalMl || 0);
+      const ratio = goal > 0 ? water_ml / goal : 0;
+      setRingProgress(ratio);
+      const waterL = (water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
+      const goalL = (goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
+      goalNumbers.textContent = `${waterL} / ${goalL} л`;
+      goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`;
+    }
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -352,7 +311,23 @@
         userInfoEl.classList.remove('hidden');
         userNameEl.textContent = user.displayName || user.email;
         userAvatarEl.innerHTML = user.photoURL ? `<img src="${user.photoURL}" alt="Аватар" width="32" height="32"/>` : '';
-        await setDoc(doc(db, 'users', user.uid), { uid:user.uid, displayName:user.displayName||null, email:user.email||null, photoURL:user.photoURL||null, lastLoginAt:serverTimestamp(), createdAt:serverTimestamp() }, { merge:true });
+
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { uid:user.uid, displayName:user.displayName||null, email:user.email||null, photoURL:user.photoURL||null, lastLoginAt:serverTimestamp(), createdAt:serverTimestamp() }, { merge:true });
+
+        // Подписка на профиль пользователя (для daily_goal_ml)
+        unsubUserDoc = onSnapshot(userRef, async (snap) => {
+          const d = snap.data() || {};
+          if (typeof d.daily_goal_ml !== 'number') {
+            // если нет цели — установим дефолт 3000 мл один раз (не мешает своим значениям)
+            await setDoc(userRef, { daily_goal_ml: 3000 }, { merge: true });
+            currentGoalMl = 3000;
+          } else {
+            currentGoalMl = Math.min(10000, Math.max(500, Math.round(d.daily_goal_ml))); // 0.5–10 л
+          }
+          goalInput.value = (currentGoalMl/1000).toFixed(1);
+        });
+
         subscribeMyDailyTotal();
         activateTab('day');
       } else {
@@ -364,15 +339,26 @@
       }
     });
 
-    // === Действия
+    saveGoalBtn.addEventListener('click', async () => {
+      const user = auth.currentUser; if (!user) return;
+      const liters = parseFloat(goalInput.value);
+      if (!Number.isFinite(liters)) { alert('Введите цель в литрах'); return; }
+      const clamped = Math.min(10, Math.max(0.5, liters));
+      const ml = Math.round(clamped * 1000);
+      await setDoc(doc(db,'users', user.uid), { daily_goal_ml: ml }, { merge: true });
+      currentGoalMl = ml; updateProgressUI(lastWaterMl);
+      toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
+    });
+
+    // === Действия / UI ===
     addChips.forEach(btn => btn.addEventListener('click', (e) => { const ml = parseInt(btn.dataset.add, 10); addAmount(ml); if(e && e.clientX!=null){ splashAt(e.clientX, e.clientY, {neg: ml<0}); } }));
     addCustomBtn.addEventListener('click', () => { const v = parseInt(customInput.value, 10); if (!Number.isFinite(v) || v === 0) { toast('Введите количество мл (не 0)'); return; } addAmount(v); customInput.value=''; const r = addCustomBtn.getBoundingClientRect(); splashAt(r.left + r.width/2, r.top + r.height/2, {neg: v<0}); });
     undoBtn.addEventListener('click', undoLast);
-    // Подписка на клики по вкладкам
     tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.scope)));
 
     function toast(msg){ lastActionEl.textContent = msg; lastActionEl.classList.add('success'); setTimeout(()=>{ lastActionEl.textContent=''; lastActionEl.classList.remove('success'); }, 2500); }
 
+    let lastWaterMl = 0;
     function subscribeMyDailyTotal(){
       if (unsubMyDaily) unsubMyDaily();
       const { dateStr } = keysFor(new Date());
@@ -381,17 +367,15 @@
       unsubMyDaily = onSnapshot(ref, (snap) => {
         const d = snap.exists() ? snap.data() : { total_water_ml:0, total_ml:0 };
         const water = d.total_water_ml || 0; const raw = d.total_ml || 0;
+        lastWaterMl = water;
         myTotalWaterLitersEl.textContent = (water/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
         myRawTotalEl.textContent = `Всего напитков: ${(raw/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`;
+        updateProgressUI(water);
       });
     }
 
     function activateTab(scope){
-      tabs.forEach(t => {
-        const isActive = t.dataset.scope === scope;
-        t.classList.toggle('active', isActive);
-        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      });
+      tabs.forEach(t => { const isActive = t.dataset.scope === scope; t.classList.toggle('active', isActive); t.setAttribute('aria-selected', isActive ? 'true' : 'false'); });
       if (unsubLB) { unsubLB(); unsubLB=null; }
       const now = new Date();
       const { dateStr, monthStr, yearStr } = keysFor(now);
@@ -417,6 +401,28 @@
         node.querySelector('.am').textContent = `${w.toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л воды-экв.`;
         lbListEl.appendChild(node);
       });
+    }
+
+    // === Слой и функции анимации брызг
+    const splashLayer = document.getElementById('splashLayer');
+    function splashAt(x, y, opts = {}){
+      const count = opts.count || 14;
+      for(let i=0;i<count;i++){
+        const p = document.createElement('div'); p.className = 'splash-particle';
+        const angle = Math.random()*Math.PI*2; const dist = 40 + Math.random()*70;
+        const dx = Math.cos(angle)*dist; const dy = Math.sin(angle)*dist - 10;
+        const size = 6 + Math.random()*8;
+        p.style.setProperty('--dx', dx+'px'); p.style.setProperty('--dy', dy+'px');
+        p.style.width = size+'px'; p.style.height = size+'px'; p.style.left = (x - size/2)+'px'; p.style.top  = (y - size/2)+'px';
+        if (opts.neg){ p.style.background = 'radial-gradient(circle at 30% 30%, #fca5a5, #f87171 60%)'; p.style.filter = 'drop-shadow(0 6px 16px rgba(248,113,113,.25))'; }
+        splashLayer.appendChild(p); p.addEventListener('animationend', function(){ p.remove(); });
+      }
+      const r = document.createElement('div'); r.className = 'splash-ripple'; r.style.left = x+'px'; r.style.top  = y+'px'; if (opts.neg){ r.style.borderColor = 'rgba(248,113,113,.7)'; }
+      splashLayer.appendChild(r); r.addEventListener('animationend', function(){ r.remove(); });
+    }
+    function splashNearTotal(neg){
+      const el = document.getElementById('myTotalWaterLiters'); const rect = el.getBoundingClientRect();
+      const x = rect.left + rect.width/2; const y = rect.top + rect.height/2; splashAt(x, y, {neg: !!neg, count: 10});
     }
 
     async function addAmount(ml){
@@ -448,8 +454,8 @@
       const mine = qs.docs.find(d => d.data().uid === user.uid && d.data().dateStr === dateStr);
       if (!mine) { toast('Нечего отменять за сегодня'); return; }
       const data = mine.data();
-      const batch = writeBatch(db);
       const wml = data.water_ml || Math.round(data.ml * (data.factor || 1));
+      const batch = writeBatch(db);
       batch.set(doc(db,'daily_totals',dateStr,'users',user.uid),   { total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
       batch.set(doc(db,'monthly_totals',data.monthStr,'users',user.uid),{ total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
       batch.set(doc(db,'yearly_totals',data.yearStr,'users',user.uid), { total_ml: increment(-data.ml), total_water_ml: increment(-wml), updatedAt:serverTimestamp() }, { merge:true });
@@ -457,6 +463,5 @@
       toast('Последнее действие отменено');
     }
   </script>
-  <div id="splashLayer"></div>
 </body>
 </html>
