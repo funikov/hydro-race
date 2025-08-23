@@ -298,7 +298,6 @@
         <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
       </section>
 
-      <!-- Ачивки — теперь в самом низу -->
       <section class="card" id="achCard" aria-labelledby="achTitle">
         <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="achTitle">Ачивки</h2>
@@ -365,7 +364,7 @@
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8з2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -379,11 +378,11 @@
     setPersistence(auth, browserLocalPersistence).catch(console.warn);
     getRedirectResult(auth).catch(()=>{});
 
-    /* ==== ICONS ==== */
+    /* ==== ICONS (только латиница в путях) ==== */
     const ICONS = {
       water:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2s6 7.2 6 11.2A6 6 0 1 1 6 13.2C6 9.2 12 2 12 2Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
       tea:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h11a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M15 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      coffee:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h10a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3З" stroke="currentColor" stroke-width="1.5"/><path d="M16 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4c0 1 .8 1.5.8 2.4S8 8 8 8M11 4c0 1 .8 1.5.8 2.4S11 8 11 8" stroke="currentColor" stroke-width="1.5"/></svg>`.replace('З','Z'),
+      coffee:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10h10a4 4 0 0 1 0 8H9a5 5 0 0 1-5-5v-3Z" stroke="currentColor" stroke-width="1.5"/><path d="M16 10h3a3 3 0 1 1 0 6h-2" stroke="currentColor" stroke-width="1.5"/><path d="M8 4c0 1 .8 1.5.8 2.4S8 8 8 8M11 4c0 1 .8 1.5.8 2.4S11 8 11 8" stroke="currentColor" stroke-width="1.5"/></svg>`,
       milk:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 3h8l-2 3v13a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V6L8 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 11h4M10 15h4" stroke="currentColor" stroke-width="1.5"/></svg>`,
       cola_zero:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
       kvass:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
@@ -771,7 +770,6 @@
     let unlockedToday = new Set(); // дневные за сегодня
 
     function renderAchievements(){
-      const today = keysFor(new Date()).dateStr;
       achGrid.innerHTML='';
       ACH_DEFS.forEach(a=>{
         const isDaily = DAILY_ACH_IDS.has(a.id);
@@ -794,7 +792,7 @@
         unlockedAll.clear(); unlockedToday.clear();
         qs.forEach(docSnap=>{
           const x = docSnap.data()||{};
-          const baseId = x.id || null; // сохраняем исходный id
+          const baseId = x.id || null;
           if (!baseId) return;
           const isDaily = x.daily === true || DAILY_ACH_IDS.has(baseId);
           if (isDaily){
@@ -807,7 +805,6 @@
       });
     }
 
-    // защита от повторной записи в одну сессию
     const emittedAchDocIds = new Set();
     async function recordAchievement(id,payload={}){
       const uid=auth.currentUser?.uid; if (!uid) return;
@@ -966,9 +963,9 @@
 
       const cx = W/2, cy = H/2, R = 100, r = 66;
       if (total <= 0){
-        ctx.globalAlpha = .18;
-        ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.arc(cx,cy,r,Math.PI*2,0,true);
-        ctx.closePath(); ctx.fillStyle = '#ffffff22'; ctx.fill(); ctx.globalAlpha = 1;
+        const ctx2 = ctx; ctx2.globalAlpha = .18;
+        ctx2.beginPath(); ctx2.arc(cx,cy,R,0,Math.PI*2); ctx2.arc(cx,cy,r,Math.PI*2,0,true);
+        ctx2.closePath(); ctx2.fillStyle = '#ffffff22'; ctx2.fill(); ctx2.globalAlpha = 1;
         syncHeights(); return;
       }
 
@@ -995,18 +992,8 @@
       syncHeights();
     }
 
-    saveGoalBtn.addEventListener('click', async ()=>{
-      const user = auth.currentUser; if (!user) return;
-      const liters = parseFloat(goalInput.value);
-      if (!Number.isFinite(liters)){ alert('Введите цель в литрах'); return; }
-      const clamped = Math.min(10, Math.max(0.5, liters));
-      const ml = Math.round(clamped*1000);
-      await setDoc(doc(db,'users', user.uid), { daily_goal_ml: ml }, { merge:true });
-      currentGoalMl = ml; updateProgressUI(lastWaterMl);
-      toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
-    });
-
-    // Синхронизация высот «Аналитика ↔ Пончик»
+    const insightsCard = document.getElementById('insightsCard');
+    const donutCard = document.getElementById('donutCard');
     function syncHeights(){
       const desktop = window.matchMedia('(min-width: 961px)').matches;
       if (!desktop){ insightsCard.style.height=''; return; }
@@ -1118,6 +1105,9 @@
       if (life >= 500*1000)  await recordAchievement('lifetime_500l', { total_ml: life });
       if (life >= 1000*1000) await recordAchievement('lifetime_1000l',{ total_ml: life });
     }
+
+    // первичная отрисовка
+    renderBeverages(); updateFactorHint(); drawDonut(); renderHourChart();
   </script>
 </body>
 </html>
