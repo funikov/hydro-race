@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fredoka:wght@400;600;800&family=Monoton&display=swap" rel="stylesheet">
 
   <style>
-    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ (переопределяются темами) ===== */
+    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ ===== */
     :root{
       --bg1:#0b0f1d;
       --bg2:#0f172a;
@@ -125,7 +125,7 @@
       box-shadow:none;
     }
 
-    /* Макет 2×2 */
+    /* Макет 2×N */
     main{max-width:1100px;margin:18px auto;padding:0 16px}
     .grid.two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch;}
     .col-left,.col-right{display:flex;flex-direction:column;gap:18px}
@@ -133,11 +133,15 @@
     @media (min-width: 961px) {
       .grid.two-col{
         grid-template-columns:1.1fr .9fr;
-        grid-template-areas:"day lb" "insights donut";
+        grid-template-areas:
+          "day lb"
+          "insights donut"
+          "insights ach"; /* новая строка для ачивок справа под пончиком */
       }
       .col-left, .col-right { display: contents; }
       #myDayCard{grid-area: day;} #lbCard{grid-area: lb;}
       #insightsCard{grid-area: insights;} #donutCard{grid-area: donut;}
+      #achCard{grid-area: ach;}
     }
 
     /* Карточки */
@@ -210,7 +214,7 @@
     .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
     .progress .inside .big{
       font-weight:900;
-      font-size:20px; /* как в пончике */
+      font-size:20px;
       display:inline-block;
       white-space:nowrap;
       transform-origin:center center;
@@ -257,11 +261,21 @@
     /* Ачивки */
     .ach-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
     @media(max-width:520px){.ach-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    .ach{display:grid;place-items:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,#11192d,#0d1426)}
-    body[data-theme="groovy"] .ach{border-radius:16px;background:conic-gradient(from 0deg, #ffffff08, #ffffff12, #ffffff08), linear-gradient(180deg,#1a113d,#0d0d25); box-shadow:inset 0 0 0 1px #ffffff10, 0 10px 24px #0008;}
-    .ach .badge{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#0b1020;background:linear-gradient(180deg, var(--brand), var(--brand2));box-shadow:0 6px 16px rgba(34,211,238,.25)}
-    body[data-theme="groovy"] .ach .badge{width:32px;height:32px;background:conic-gradient(from 0deg, var(--brand), var(--brand2), #ff6ad5, #ffd166, #a78bfa, var(--brand)); box-shadow:0 8px 20px rgba(255,255,255,.12), 0 0 0 2px #0003 inset;}
+    .ach{
+      display:grid;place-items:center;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,#11192d,#0d1426);
+      text-align:center;
+    }
     .ach.locked{opacity:.65;filter:grayscale(.15) brightness(.95)}
+    .ach-title{font-size:12px;font-weight:700}
+    .ach-sub{font-size:11px;color:var(--muted)}
+    .ach-ill{width:56px;height:56px;border-radius:12px;overflow:hidden;background:#0b0d24;border:1px solid var(--border);display:grid;place-items:center}
+    .ach-ill svg{width:46px;height:46px}
+
+    body[data-theme="groovy"] .ach{
+      border-radius:16px;background:conic-gradient(from 0deg, #ffffff08, #ffffff12, #ffffff08), linear-gradient(180deg,#1a113d,#0d0d25);
+      box-shadow:inset 0 0 0 1px #ffffff10, 0 10px 24px #0008;
+    }
+    body[data-theme="groovy"] .ach-ill{border-radius:14px;box-shadow:inset 0 0 0 1px #ffffff10}
 
     /* Пончик */
     .donut-wrap{position:relative;display:grid;grid-template-columns:auto 1fr;gap:14px}
@@ -395,9 +409,6 @@
           </div>
           <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
           <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
-
-          <div class="muted" style="margin-top:14px">Ачивки</div>
-          <div id="achievements" class="ach-grid"></div>
         </section>
       </div>
 
@@ -442,6 +453,15 @@
           </div>
 
           <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
+        </section>
+
+        <!-- Ачивки: отдельная панель -->
+        <section class="card" id="achCard" aria-labelledby="achTitle">
+          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+            <h2 id="achTitle">Ачивки</h2>
+            <div class="muted">соберите их все!</div>
+          </div>
+          <div id="achievements" class="ach-grid"></div>
         </section>
       </div>
     </div>
@@ -505,7 +525,7 @@
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWм8з2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -528,7 +548,7 @@
       cola_zero:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7l3-4Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
       kvass:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 3h10l-1 4v9a4 4 0 0 1-4 4h0a4 4 0 0 1-4-4V7L7 3Z" stroke="currentColor" stroke-width="1.5"/><path d="M8 9h8" stroke="currentColor" stroke-width="1.5"/></svg>`,
       juice:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12l-1 3v9a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V9L6 6Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 3h6" stroke="currentColor" stroke-width="1.5"/></svg>`,
-      lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10L5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
+      lemonade:`<svg viewBox="0 0 24 24" class="icon" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M5 7h10l-1 3v8a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V10Л5 7Z" stroke="currentColor" stroke-width="1.5"/></svg>`
     };
 
     const BEVERAGES = [
@@ -601,7 +621,7 @@
     let compMap = Object.create(null); // key -> water_ml
 
     // ===== Theme logic =====
-    let currentTheme = null; // 'classic' | 'groovy'
+    let currentTheme = null;
     function setThemeButtons(theme){
       themeClassicBtn.classList.toggle('active', theme==='classic');
       themeGroovyBtn.classList.toggle('active', theme==='groovy');
@@ -633,7 +653,7 @@
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
-    function fitGoalText(){ /* no-op: центр как у пончика, авто-масштаб не нужен */ }
+    function fitGoalText(){ /* no-op */ }
     window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{fitGoalText(); drawDonut();},120);}})());
     function updateProgressUI(water_ml){
       const goal = Math.max(0, currentGoalMl || 0);
@@ -871,6 +891,74 @@
       { id:'streak_3',    name:'Серия ×3', desc:'3 дня подряд', icon:'🔥' },
       { id:'streak_7',    name:'Серия ×7', desc:'7 дней подряд', icon:'🏆' }
     ];
+
+    // Векторные иллюстрации (оригинальные, мультяшные, без ссылок на чьи-то стили)
+    const ACH_SVGS = {
+      first_liter: `
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7df9ff"/><stop offset="1" stop-color="#00ffd1"/>
+            </linearGradient>
+          </defs>
+          <g fill="none" stroke="none">
+            <path d="M32 6c7 10 14 18 14 26a14 14 0 1 1-28 0c0-8 7-16 14-26z" fill="url(#g1)"/>
+            <!-- глазки-жаба -->
+            <circle cx="24" cy="34" r="3" fill="#0b0d24"/>
+            <circle cx="40" cy="34" r="3" fill="#0b0d24"/>
+            <path d="M26 42c4 3 8 3 12 0" stroke="#0b0d24" stroke-width="2" stroke-linecap="round"/>
+          </g>
+        </svg>
+      `,
+      goal_today: `
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="t1" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff6ad5"/>
+            </radialGradient>
+          </defs>
+          <g fill="none">
+            <circle cx="32" cy="32" r="22" fill="url(#t1)" opacity=".9"/>
+            <circle cx="32" cy="32" r="14" fill="#0b0d24" opacity=".35"/>
+            <circle cx="32" cy="32" r="7" fill="#00ffd1" opacity=".9"/>
+            <!-- лилия-стрела -->
+            <path d="M50 26l-10 10-4-4 10-10 4 4z" fill="#7df9ff"/>
+            <path d="M53 23c-4-1-7 1-10 3 2-3 4-6 3-10 3 2 6 4 7 7z" fill="#98f5e1"/>
+          </g>
+        </svg>
+      `,
+      streak_3: `
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="fl" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ff6ad5"/><stop offset="1" stop-color="#ffd166"/>
+            </linearGradient>
+          </defs>
+          <g>
+            <!-- пламя -->
+            <path d="M32 8c8 8 2 12 8 18 6 6 6 18-8 22-14-4-14-16-8-22 6-6 0-10 8-18z" fill="url(#fl)"/>
+            <!-- грибы -->
+            <circle cx="22" cy="46" r="5" fill="#7df9ff"/><rect x="21" y="46" width="2" height="6" fill="#c8ffee"/>
+            <circle cx="42" cy="46" r="5" fill="#00ffd1"/><rect x="41" y="46" width="2" height="6" fill="#c8ffee"/>
+          </g>
+        </svg>
+      `,
+      streak_7: `
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none">
+            <!-- кубок -->
+            <path d="M24 14h16a6 6 0 0 1 6 6v6a10 10 0 0 1-10 10h-8A10 10 0 0 1 18 26v-6a6 6 0 0 1 6-6z" fill="#ffd166"/>
+            <rect x="28" y="36" width="8" height="8" rx="2" fill="#ffd166"/>
+            <rect x="22" y="44" width="20" height="4" rx="2" fill="#ffd166"/>
+            <!-- лилия -->
+            <ellipse cx="32" cy="50" rx="14" ry="6" fill="#00ffd1" opacity=".85"/>
+            <circle cx="26" cy="50" r="2" fill="#0b0d24"/>
+            <circle cx="38" cy="50" r="2" fill="#0b0d24"/>
+          </g>
+        </svg>
+      `
+    };
+
     const achGrid = document.getElementById('achievements');
     let unlocked = new Set();
 
@@ -880,7 +968,10 @@
         const has=unlocked.has(a.id);
         const el=document.createElement('div');
         el.className='ach'+(has?'':' locked');
-        el.innerHTML=`<div class="badge">${a.icon}</div><div style="font-size:12px;font-weight:700;">${a.name}</div><div class="muted" style="font-size:11px;text-align:center">${a.desc}</div>`;
+        el.innerHTML=`
+          <div class="ach-ill">${ACH_SVGS[a.id]||''}</div>
+          <div class="ach-title">${a.name}</div>
+          <div class="ach-sub">${a.desc}</div>`;
         achGrid.appendChild(el);
       });
     }
@@ -980,13 +1071,14 @@
       }
     }
 
-    openMonthDailyBtn.addEventListener('click', async ()=>{
+    document.getElementById('openMonthDailyBtn').addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
       const now = new Date();
       const rows = await fetchMonthRowsSafe(user.uid, now.getFullYear(), now.getMonth());
 
       let sumW=0, sumT=0;
-      monthTableBody.innerHTML = rows.map(r=>{
+      const body = document.getElementById('monthTableBody');
+      body.innerHTML = rows.map(r=>{
         sumW += r.total_water_ml; sumT += r.total_ml;
         return `<tr>
           <td>${new Date(r.dateStr).toLocaleDateString(undefined,{day:'2-digit', month:'short', weekday:'short'})}</td>
@@ -995,17 +1087,17 @@
           <td>${goalPct(r.total_water_ml, currentGoalMl)}</td>
         </tr>`;
       }).join('');
-      sumWaterEl.textContent = liters(sumW);
-      sumTotalEl.textContent = liters(sumT);
-      sumShareEl.textContent = '—';
+      document.getElementById('sumWater').textContent = liters(sumW);
+      document.getElementById('sumTotal').textContent = liters(sumT);
+      document.getElementById('sumShare').textContent = '—';
 
-      monthTitle.textContent = 'Месяц по дням';
-      monthSubTitle.textContent = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
-      monthModal.style.display = 'flex';
+      document.getElementById('monthTitle').textContent = 'Месяц по дням';
+      document.getElementById('monthSubTitle').textContent = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+      document.getElementById('monthModal').style.display = 'flex';
     });
 
-    monthCloseBtn.addEventListener('click', ()=>{ monthModal.style.display='none'; });
-    monthModal.addEventListener('click', (e)=>{ if (e.target === monthModal) monthModal.style.display='none'; });
+    document.getElementById('monthCloseBtn').addEventListener('click', ()=>{ document.getElementById('monthModal').style.display='none'; });
+    document.getElementById('monthModal').addEventListener('click', (e)=>{ if (e.target === document.getElementById('monthModal')) document.getElementById('monthModal').style.display='none'; });
 
     /* ===== Пончик ===== */
     const PALETTE = ['#00ffd1','#7df9ff','#ff6ad5','#ffd166','#a78bfa','#ff8fab','#8aff80','#f5a3ff'];
@@ -1067,7 +1159,31 @@
       toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
     });
 
-    // ===== Первичный рендер напитков =====
+    // ===== Подписка на сегодняшние приёмы для доната/графика =====
+    let unsubIntakes=null;
+    function subscribeIntakesToday(){
+      if (unsubIntakes) unsubIntakes();
+      const { dateStr } = keysFor(new Date());
+      const uid = auth.currentUser?.uid; if (!uid) return;
+      const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
+      unsubIntakes = onSnapshot(qy, (qs)=>{
+        hourData = new Array(24).fill(0);
+        compMap = Object.create(null);
+        qs.forEach(d=>{
+          const it=d.data();
+          const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
+          const h=(ts instanceof Date) ? ts.getHours() : 0;
+          const wml = Math.max(0, it.water_ml ?? Math.round((it.ml||0) * (it.factor||1)));
+          if (h>=0 && h<24) hourData[h] += wml;
+          const key = it.beverage || 'unknown';
+          compMap[key] = (compMap[key]||0) + wml;
+        });
+        renderHourChart();
+        drawDonut();
+      });
+    }
+
+    // ===== Первичный запуск =====
     renderBeverages(); updateFactorHint();
   </script>
 </body>
