@@ -293,6 +293,18 @@
     const periodLabelEl = document.getElementById('periodLabel');
     const tabs = Array.from(document.querySelectorAll('.tab'));
 
+        // Включаем переключение периода лидерборда
+    if (!window.__tabsBound) {
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => activateTab(tab.dataset.scope));
+        // доступно с клавиатуры
+        tab.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(tab.dataset.scope); }
+        });
+      });
+      window.__tabsBound = true; // чтобы не навешивать повторно при смене auth state
+    }
+
     // Progress
     const goalFg = document.getElementById('goalFg');
     const goalNumbers = document.getElementById('goalNumbers');
