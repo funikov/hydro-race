@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fredoka:wght@400;600;800&family=Monoton&display=swap" rel="stylesheet">
 
   <style>
-    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ (переопределяются темами) ===== */
+    /* ===== БАЗОВЫЕ ПЕРЕМЕННЫЕ ===== */
     :root{
       --bg1:#0b0f1d;
       --bg2:#0f172a;
@@ -125,23 +125,43 @@
       box-shadow:none;
     }
 
-    /* Макет 2×N */
+    /* ===== ЛЕЙАУТ (grid-areas) ===== */
     main{max-width:1100px;margin:18px auto;padding:0 16px}
-    .grid.two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch;}
-    .col-left,.col-right{display:flex;flex-direction:column;gap:18px}
-    @media(max-width:960px){.grid.two-col{grid-template-columns:1fr}}
+    .grid.two-col{
+      display:grid;
+      gap:18px;
+      align-items:stretch;
+    }
+
+    /* Назначаем grid-area ВСЕГДА (для всех брейкпоинтов) */
+    #achCard{grid-area: ach;}
+    #myDayCard{grid-area: day;}
+    #lbCard{grid-area: lb;}
+    #insightsCard{grid-area: insights;}
+    #donutCard{grid-area: donut;}
+
+    /* Мобайл: одна колонка, «Ачивки» сверху */
+    @media(max-width:960px){
+      .grid.two-col{
+        grid-template-columns:1fr;
+        grid-template-areas:
+          "ach"
+          "day"
+          "lb"
+          "insights"
+          "donut";
+      }
+    }
+
+    /* Десктоп: два столбца; «Ачивки» на всю ширину сверху */
     @media (min-width: 961px) {
       .grid.two-col{
         grid-template-columns:1.1fr .9fr;
         grid-template-areas:
+          "ach ach"
           "day lb"
-          "insights donut"
-          "insights ach";
+          "insights donut";
       }
-      .col-left, .col-right { display: contents; }
-      #myDayCard{grid-area: day;} #lbCard{grid-area: lb;}
-      #insightsCard{grid-area: insights;} #donutCard{grid-area: donut;}
-      #achCard{grid-area: ach;}
     }
 
     /* Карточки */
@@ -326,144 +346,138 @@
 
   <main id="app" class="hidden">
     <div class="grid two-col">
-      <!-- ЛЕВАЯ КОЛОНКА -->
-      <div class="col-left">
-        <!-- Мой день -->
-        <section class="card" id="myDayCard" aria-labelledby="myDayTitle">
-          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-            <h2 id="myDayTitle">Мой день</h2>
-            <div class="muted" id="todayLabel"></div>
-          </div>
+      <!-- ПАНЕЛЬ Ачивки — сверху на всю ширину -->
+      <section class="card" id="achCard" aria-labelledby="achTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="achTitle">Ачивки</h2>
+          <div class="muted">соберите их все!</div>
+        </div>
+        <div id="achievements" class="ach-grid"></div>
+      </section>
 
-          <div class="bev-grid" id="bevGrid" aria-label="Выбор напитка"></div>
-          <div class="muted" id="factorHint"></div>
+      <!-- ЛЕВАЯ: Мой день -->
+      <section class="card" id="myDayCard" aria-labelledby="myDayTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="myDayTitle">Мой день</h2>
+          <div class="muted" id="todayLabel"></div>
+        </div>
 
-          <!-- Градиент для кольца прогресса -->
-          <svg width="0" height="0" style="position:absolute">
-            <defs>
-              <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop id="rgStop1" offset="0%" stop-color="#22d3ee"/>
-                <stop id="rgStop2" offset="50%" stop-color="#60a5fa"/>
-                <stop id="rgStop3" offset="100%" stop-color="#60a5fa"/>
-              </linearGradient>
-            </defs>
-          </svg>
+        <div class="bev-grid" id="bevGrid" aria-label="Выбор напитка"></div>
+        <div class="muted" id="factorHint"></div>
 
-          <div class="progress-wrap">
-            <div class="progress" aria-label="Прогресс к цели">
-              <svg viewBox="0 0 130 130" aria-hidden="true">
-                <circle class="ring-bg" cx="65" cy="65" r="52" />
-                <circle class="ring-fg" id="goalFg" cx="65" cy="65" r="52" stroke-dasharray="327" stroke-dashoffset="327" />
-              </svg>
-              <div class="inside">
-                <div class="inside-center" style="text-align:center">
-                  <div class="big" id="goalCurrent">0.0 л</div>
-                  <div class="muted" id="goalSub">из 3.0 л • 0%</div>
-                </div>
+        <!-- Градиент для кольца прогресса -->
+        <svg width="0" height="0" style="position:absolute">
+          <defs>
+            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop id="rgStop1" offset="0%" stop-color="#22d3ee"/>
+              <stop id="rgStop2" offset="50%" stop-color="#60a5fa"/>
+              <stop id="rgStop3" offset="100%" stop-color="#60a5fa"/>
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <div class="progress-wrap">
+          <div class="progress" aria-label="Прогресс к цели">
+            <svg viewBox="0 0 130 130" aria-hidden="true">
+              <circle class="ring-bg" cx="65" cy="65" r="52" />
+              <circle class="ring-fg" id="goalFg" cx="65" cy="65" r="52" stroke-dasharray="327" stroke-dashoffset="327" />
+            </svg>
+            <div class="inside">
+              <div class="inside-center" style="text-align:center">
+                <div class="big" id="goalCurrent">0.0 л</div>
+                <div class="muted" id="goalSub">из 3.0 л • 0%</div>
               </div>
             </div>
-            <div>
-              <div class="stat" aria-live="polite">
-                <div class="big" id="myTotalWaterLiters">0,0</div>
-                <div class="unit">л воды-экв.</div>
-              </div>
-              <div class="muted" id="myRawTotal" style="margin-top:4px">Всего напитков: 0,0 л</div>
-              <div class="goal-controls" style="margin-top:10px">
-                <label for="goalInput" class="muted">Цель на день:</label>
-                <input id="goalInput" type="number" min="0.5" max="10" step="0.1" placeholder="л" style="width:90px" />
-                <span class="muted">л</span>
-                <button class="btn secondary" id="saveGoalBtn" title="Сохранить цель">Сохранить</button>
-              </div>
-              <div class="hint" id="lastAction" style="margin-top:6px"></div>
+          </div>
+          <div>
+            <div class="stat" aria-live="polite">
+              <div class="big" id="myTotalWaterLiters">0,0</div>
+              <div class="unit">л воды-экв.</div>
             </div>
-          </div>
-
-          <div class="chipbar" aria-label="Быстро добавить">
-            <button class="chip" data-add="250">+ стакан (250 мл)</button>
-            <button class="chip" data-add="500">+ бутылка 0,5 л</button>
-            <button class="chip" data-add="1500">+ бутылка 1,5 л</button>
-          </div>
-
-          <div class="custom-add" style="margin-top:10px">
-            <input id="customInput" type="number" min="1" step="1" placeholder="Другое, мл" />
-            <button class="btn" id="addCustomBtn">Добавить</button>
-            <button class="btn secondary" id="undoBtn" title="Отменить последнее">Отменить</button>
-          </div>
-          <div class="muted" style="margin-top:6px">Можно добавлять отрицательные значения (например, -250) для коррекции.</div>
-        </section>
-
-        <!-- Аналитика сегодня -->
-        <section class="card" id="insightsCard" aria-labelledby="insightsTitle">
-          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-            <h2 id="insightsTitle">Аналитика сегодня</h2>
-            <div class="muted">по воде-эквиваленту</div>
-          </div>
-
-          <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
-          <div class="hour-wrap">
-            <div class="y-axis">
-              <div class="ylabel">мл</div>
-              <div id="yTicks" class="yticks"></div>
+            <div class="muted" id="myRawTotal" style="margin-top:4px">Всего напитков: 0,0 л</div>
+            <div class="goal-controls" style="margin-top:10px">
+              <label for="goalInput" class="muted">Цель на день:</label>
+              <input id="goalInput" type="number" min="0.5" max="10" step="0.1" placeholder="л" style="width:90px" />
+              <span class="muted">л</span>
+              <button class="btn secondary" id="saveGoalBtn" title="Сохранить цель">Сохранить</button>
             </div>
-            <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
+            <div class="hint" id="lastAction" style="margin-top:6px"></div>
           </div>
-          <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
-          <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
-        </section>
-      </div>
+        </div>
 
-      <!-- ПРАВАЯ КОЛОНКА -->
-      <div class="col-right">
-        <!-- Таблица лидеров -->
-        <section class="card" id="lbCard" aria-labelledby="lbTitle">
-          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-            <h2 id="lbTitle">Таблица лидеров</h2>
-            <div class="row" style="gap:8px; flex-wrap:wrap;">
-              <div class="tabs" role="tablist">
-                <button class="segbtn tab active" data-scope="day" role="tab" aria-selected="true">День</button>
-                <button class="segbtn tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
-                <button class="segbtn tab" data-scope="year" role="tab" aria-selected="false">Год</button>
-              </div>
-              <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
+        <div class="chipbar" aria-label="Быстро добавить">
+          <button class="chip" data-add="250">+ стакан (250 мл)</button>
+          <button class="chip" data-add="500">+ бутылка 0,5 л</button>
+          <button class="chip" data-add="1500">+ бутылка 1,5 л</button>
+        </div>
+
+        <div class="custom-add" style="margin-top:10px">
+          <input id="customInput" type="number" min="1" step="1" placeholder="Другое, мл" />
+          <button class="btn" id="addCustomBtn">Добавить</button>
+          <button class="btn secondary" id="undoBtn" title="Отменить последнее">Отменить</button>
+        </div>
+        <div class="muted" style="margin-top:6px">Можно добавлять отрицательные значения (например, -250) для коррекции.</div>
+      </section>
+
+      <!-- ПРАВАЯ: Таблица лидеров -->
+      <section class="card" id="lbCard" aria-labelledby="lbTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="lbTitle">Таблица лидеров</h2>
+          <div class="row" style="gap:8px; flex-wrap:wrap;">
+            <div class="tabs" role="tablist">
+              <button class="segbtn tab active" data-scope="day" role="tab" aria-selected="true">День</button>
+              <button class="segbtn tab" data-scope="month" role="tab" aria-selected="false">Месяц</button>
+              <button class="segbtn tab" data-scope="year" role="tab" aria-selected="false">Год</button>
             </div>
+            <button class="btn secondary" id="openMonthDailyBtn" title="Показать таблицу по дням месяца">Дни месяца</button>
           </div>
-          <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
-          <div class="lb-list" id="lbList" aria-live="polite"></div>
-          <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
-        </section>
+        </div>
+        <div class="muted" id="periodLabel" style="margin:8px 0 12px;"></div>
+        <div class="lb-list" id="lbList" aria-live="polite"></div>
+        <div class="muted" style="margin-top:6px">Рейтинг по воде-эквиваленту; общий объём хранится отдельно.</div>
+      </section>
 
-        <!-- Состав напитков (сегодня) -->
-        <section class="card" id="donutCard" aria-labelledby="donutTitle">
-          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-            <h2 id="donutTitle">Состав напитков (сегодня)</h2>
-            <div class="muted">по воде-эквиваленту</div>
+      <!-- НИЗ ЛЕВО: Аналитика сегодня -->
+      <section class="card" id="insightsCard" aria-labelledby="insightsTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="insightsTitle">Аналитика сегодня</h2>
+          <div class="muted">по воде-эквиваленту</div>
+        </div>
+
+        <div class="muted" style="margin-top:6px">Гидратация по часам (сегодня)</div>
+        <div class="hour-wrap">
+          <div class="y-axis">
+            <div class="ylabel">мл</div>
+            <div id="yTicks" class="yticks"></div>
           </div>
+          <div id="hourChart" class="hour-chart" aria-label="График по часам"></div>
+        </div>
+        <div class="hour-axis"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+        <div id="hourEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет добавлений за сегодня</div>
+      </section>
 
-          <div class="donut-wrap" style="margin-top:6px">
-            <div style="position:relative">
-              <canvas id="donutCanvas" width="260" height="260" aria-label="Диаграмма по напиткам"></canvas>
-              <div class="donut-center">
-                <div style="text-align:center">
-                  <div class="big" id="donutTotal">0,0 л</div>
-                  <div class="muted" style="font-size:12px">сегодня</div>
-                </div>
+      <!-- НИЗ ПРАВО: Состав напитков -->
+      <section class="card" id="donutCard" aria-labelledby="donutTitle">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
+          <h2 id="donutTitle">Состав напитков (сегодня)</h2>
+          <div class="muted">по воде-эквиваленту</div>
+        </div>
+
+        <div class="donut-wrap" style="margin-top:6px">
+          <div style="position:relative">
+            <canvas id="donutCanvas" width="260" height="260" aria-label="Диаграмма по напиткам"></canvas>
+            <div class="donut-center">
+              <div style="text-align:center">
+                <div class="big" id="donutTotal">0,0 л</div>
+                <div class="muted" style="font-size:12px">сегодня</div>
               </div>
             </div>
-            <div class="legend" id="donutLegend"></div>
           </div>
+          <div class="legend" id="donutLegend"></div>
+        </div>
 
-          <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
-        </section>
-
-        <!-- Ачивки: отдельная панель -->
-        <section class="card" id="achCard" aria-labelledby="achTitle">
-          <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
-            <h2 id="achTitle">Ачивки</h2>
-            <div class="muted">соберите их все!</div>
-          </div>
-          <div id="achievements" class="ach-grid"></div>
-        </section>
-      </div>
+        <div id="donutEmpty" class="muted" style="margin-top:8px;text-align:center;display:none;">Пока нет данных за сегодня</div>
+      </section>
     </div>
   </main>
 
@@ -607,21 +621,20 @@
     const monthSubTitle   = document.getElementById('monthSubTitle');
     const monthTableBody  = document.getElementById('monthTableBody');
     const openMonthDailyBtn = document.getElementById('openMonthDailyBtn');
-    const sumWaterEl = document.getElementById('sumWater');
-    const sumTotalEl = document.getElementById('sumTotal');
-    const sumShareEl = document.getElementById('sumShare');
 
-    // Donut refs
+    // Donut & Insights sync
     const donutCanvas = document.getElementById('donutCanvas');
     const donutLegend = document.getElementById('donutLegend');
     const donutEmpty  = document.getElementById('donutEmpty');
     const donutTotalEl= document.getElementById('donutTotal');
+    const donutCard   = document.getElementById('donutCard');
+    const insightsCard= document.getElementById('insightsCard');
 
     // Состав для пончика
     let compMap = Object.create(null); // key -> water_ml
 
     // ===== Theme logic =====
-    let currentTheme = null; // 'classic' | 'groovy'
+    let currentTheme = null;
     function setThemeButtons(theme){
       themeClassicBtn.classList.toggle('active', theme==='classic');
       themeGroovyBtn.classList.toggle('active', theme==='groovy');
@@ -653,8 +666,6 @@
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
-    function fitGoalText(){ /* no-op: центр как у пончика, авто-масштаб не нужен */ }
-    window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{fitGoalText(); drawDonut();},120);}})());
     function updateProgressUI(water_ml){
       const goal = Math.max(0, currentGoalMl || 0);
       const ratio = goal > 0 ? water_ml / goal : 0;
@@ -670,8 +681,29 @@
 
     // Beverages UI
     let currentBevKey = 'water';
-    function renderBeverages(){ bevGrid.innerHTML = ''; BEVERAGES.forEach(b => { const btn = document.createElement('button'); btn.className='bev'+(b.key===currentBevKey?' selected':''); btn.type='button'; btn.dataset.key=b.key; btn.innerHTML = `${ICONS[b.key]||''}<div class="name">${b.name}</div>`; const ic = btn.querySelector('.icon'); if (ic) ic.style.color = b.key==='water' ? 'var(--brand2)' : '#ffd166'; btn.addEventListener('click', ()=>{ currentBevKey=b.key; updateFactorHint(); renderBeverages(); }); bevGrid.appendChild(btn); }); }
-    function updateFactorHint(){ const bev = BEVERAGES.find(b=>b.key===currentBevKey); factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`; }
+    function renderBeverages(){
+      const BEVERAGES = window.BEVERAGES;
+      bevGrid.innerHTML = '';
+      BEVERAGES.forEach(b => {
+        const btn = document.createElement('button');
+        btn.className='bev'+(b.key===currentBevKey?' selected':'');
+        btn.type='button';
+        btn.dataset.key=b.key;
+        btn.innerHTML = `${ICONS[b.key]||''}<div class="name">${b.name}</div>`;
+        const ic = btn.querySelector('.icon');
+        if (ic) ic.style.color = b.key==='water' ? 'var(--brand2)' : '#ffd166';
+        btn.addEventListener('click', ()=>{
+          currentBevKey=b.key;
+          updateFactorHint();
+          renderBeverages();
+        });
+        bevGrid.appendChild(btn);
+      });
+    }
+    function updateFactorHint(){
+      const bev = BEVERAGES.find(b=>b.key===currentBevKey);
+      factorHintEl.textContent = `Сейчас: ${bev.name} — множитель ×${bev.factor}`;
+    }
 
     // ===== Auth & init =====
     todayLabelEl.textContent = `Сегодня: ${new Date().toLocaleDateString(undefined,{weekday:'short', day:'2-digit', month:'short', year:'numeric'})}`;
@@ -681,21 +713,26 @@
     themeClassicBtn.addEventListener('click', ()=>applyTheme('classic'));
     themeGroovyBtn.addEventListener('click', ()=>applyTheme('groovy'));
 
-    signInBtn.addEventListener('click', async ()=>{
-      const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt:'select_account' });
+    const provider = new GoogleAuthProvider(); provider.setCustomParameters({ prompt:'select_account' });
+    document.getElementById('signInBtn').addEventListener('click', async ()=>{
       try{ await signInWithPopup(auth, provider); }
       catch(e){
         if (e?.code==='auth/operation-not-supported-in-this-environment' || e?.code==='auth/popup-blocked'){ await signInWithRedirect(auth, provider); }
         else { alert('Ошибка входа: '+(e?.message||e)); }
       }
     });
-    signOutBtn.addEventListener('click', async ()=>{ await signOut(auth); });
+    document.getElementById('signOutBtn').addEventListener('click', async ()=>{ await signOut(auth); });
 
     let unsubMyDaily=null, unsubLB=null, unsubUserDoc=null, unsubAch=null, unsubIntakes=null;
-    const cleanupSubscriptions=()=>{ if (unsubMyDaily){unsubMyDaily();unsubMyDaily=null} if (unsubLB){unsubLB();unsubLB=null} if (unsubUserDoc){unsubUserDoc();unsubUserDoc=null} if (unsubAch){unsubAch();unsubAch=null} if (unsubIntakes){unsubIntakes();unsubIntakes=null} };
+    const cleanupSubscriptions=()=>{
+      if (unsubMyDaily){unsubMyDaily();unsubMyDaily=null}
+      if (unsubLB){unsubLB();unsubLB=null}
+      if (unsubUserDoc){unsubUserDoc();unsubUserDoc=null}
+      if (unsubAch){unsubAch();unsubAch=null}
+      if (unsubIntakes){unsubIntakes();unsubIntakes=null}
+    };
 
     onAuthStateChanged(auth, async (user)=>{
-      fitGoalText();
       if (user){
         appEl.classList.remove('hidden');
         signInBtn.classList.add('hidden'); signOutBtn.classList.remove('hidden'); userInfoEl.classList.remove('hidden');
@@ -717,12 +754,14 @@
         renderBeverages(); updateFactorHint();
         subscribeMyDailyTotal();
         subscribeIntakesToday();
-        renderHourChart(); // пустая сетка
+        renderHourChart(); // первоначальная сетка
         subscribeAchievements();
         activateTab('day');
       } else {
         appEl.classList.add('hidden');
-        signInBtn.classList.remove('hidden'); signOutBtn.classList.add('hidden'); userInfoEl.classList.add('hidden');
+        document.getElementById('signInBtn').classList.remove('hidden');
+        document.getElementById('signOutBtn').classList.add('hidden');
+        userInfoEl.classList.add('hidden');
         cleanupSubscriptions();
         renderBeverages(); updateFactorHint();
       }
@@ -839,6 +878,7 @@
         }
         hourChart.appendChild(grid);
       }
+      syncHeights(); // подправим высоту после перерисовки оси
     }
     function renderHourChart(){
       hourChart.innerHTML='';
@@ -860,8 +900,10 @@
         bar.title = `${i}:00 — ${hourData[i].toLocaleString()} мл`;
         hourChart.appendChild(bar);
       }
+      syncHeights();
     }
 
+    // ===== Подписка на сегодняшние приёмы (для графика и пончика) =====
     function subscribeIntakesToday(){
       if (unsubIntakes) unsubIntakes();
       const { dateStr } = keysFor(new Date());
@@ -899,12 +941,12 @@
               <stop offset="0" stop-color="#7df9ff"/><stop offset="1" stop-color="#00ffd1"/>
             </linearGradient>
           </defs>
-          <g fill="none" stroke="none">
-            <path d="M32 6c7 10 14 18 14 26a14 14 0 1 1-28 0c0-8 7-16 14-26z" fill="url(#g1)"/>
-            <circle cx="24" cy="34" r="3" fill="#0b0d24"/>
-            <circle cx="40" cy="34" r="3" fill="#0b0d24"/>
-            <path d="M26 42c4 3 8 3 12 0" stroke="#0b0d24" stroke-width="2" stroke-linecap="round"/>
-          </g>
+        <g fill="none" stroke="none">
+          <path d="M32 6c7 10 14 18 14 26a14 14 0 1 1-28 0c0-8 7-16 14-26z" fill="url(#g1)"/>
+          <circle cx="24" cy="34" r="3" fill="#0b0d24"/>
+          <circle cx="40" cy="34" r="3" fill="#0b0d24"/>
+          <path d="M26 42c4 3 8 3 12 0" stroke="#0b0d24" stroke-width="2" stroke-linecap="round"/>
+        </g>
         </svg>
       `,
       goal_today: `
@@ -1115,7 +1157,9 @@
       if (total <= 0){
         ctx.globalAlpha = .18;
         ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.arc(cx,cy,r,Math.PI*2,0,true);
-        ctx.closePath(); ctx.fillStyle = '#ffffff22'; ctx.fill(); ctx.globalAlpha = 1; return;
+        ctx.closePath(); ctx.fillStyle = '#ffffff22'; ctx.fill(); ctx.globalAlpha = 1;
+        syncHeights();
+        return;
       }
 
       let start = -Math.PI/2; const gap = 0.02;
@@ -1137,12 +1181,14 @@
           </div>`;
         donutLegend.appendChild(node);
       });
+
+      syncHeights();
     }
 
     /* ===== Сохранение цели ===== */
-    saveGoalBtn.addEventListener('click', async ()=>{
+    document.getElementById('saveGoalBtn').addEventListener('click', async ()=>{
       const user = auth.currentUser; if (!user) return;
-      const liters = parseFloat(goalInput.value);
+      const liters = parseFloat(document.getElementById('goalInput').value);
       if (!Number.isFinite(liters)){ alert('Введите цель в литрах'); return; }
       const clamped = Math.min(10, Math.max(0.5, liters));
       const ml = Math.round(clamped*1000);
@@ -1151,8 +1197,63 @@
       toast(`Цель сохранена: ${clamped.toFixed(1)} л/день`);
     });
 
+    // ===== Синхронизация высот «Аналитика ↔ Пончик» (только десктоп) =====
+    function syncHeights(){
+      const desktop = window.matchMedia('(min-width: 961px)').matches;
+      if (!desktop){ insightsCard.style.height=''; return; }
+      // таймаут на случай, если контент дорисовывается
+      requestAnimationFrame(()=>{ insightsCard.style.height = donutCard.offsetHeight + 'px'; });
+    }
+    window.addEventListener('resize', ()=>syncHeights());
+    // Следим за изменением размера пончика/легенды
+    if ('ResizeObserver' in window){
+      const ro = new ResizeObserver(()=>syncHeights());
+      ro.observe(donutCard);
+      ro.observe(insightsCard);
+    }
+
     // ===== Первичный рендер напитков =====
     renderBeverages(); updateFactorHint();
+
+    // ===== Подписка на личные итоги =====
+    function subscribeMyDailyTotal(){
+      if (unsubMyDaily) unsubMyDaily();
+      const { dateStr } = keysFor(new Date());
+      const uid = auth.currentUser?.uid; if (!uid) return;
+      const ref = doc(db, 'daily_totals', dateStr, 'users', uid);
+      unsubMyDaily = onSnapshot(ref, async (snap)=>{
+        const d = snap.exists()? snap.data() : { total_water_ml:0, total_ml:0 };
+        const water = d.total_water_ml || 0; const raw = d.total_ml || 0;
+        lastWaterMl = water;
+        myTotalWaterLitersEl.textContent = (water/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
+        myRawTotalEl.textContent = `Всего напитков: ${(raw/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`;
+        updateProgressUI(water);
+        await checkStreakAndAchievements(water);
+      });
+    }
+
+    // ===== Подписка на сегодня (для графика и пончика) =====
+    function subscribeIntakesToday(){
+      if (unsubIntakes) unsubIntakes();
+      const { dateStr } = keysFor(new Date());
+      const uid = auth.currentUser?.uid; if (!uid) return;
+      const qy = query(collection(db,'intakes'), where('uid','==',uid), where('dateStr','==',dateStr));
+      unsubIntakes = onSnapshot(qy, (qs)=>{
+        hourData = new Array(24).fill(0);
+        compMap = Object.create(null);
+        qs.forEach(d=>{
+          const it=d.data();
+          const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
+          const h=(ts instanceof Date) ? ts.getHours() : 0;
+          const wml = Math.max(0, it.water_ml ?? Math.round((it.ml||0) * (it.factor||1)));
+          if (h>=0 && h<24) hourData[h] += wml;
+          const key = it.beverage || 'unknown';
+          compMap[key] = (compMap[key]||0) + wml;
+        });
+        renderHourChart();
+        drawDonut();
+      });
+    }
   </script>
 </body>
 </html>
