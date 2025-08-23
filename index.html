@@ -208,7 +208,13 @@
     .progress .ring-bg{stroke:rgba(148,163,184,.18);stroke-width:12;fill:none}
     .progress .ring-fg{stroke:url(#ringGradient);stroke-linecap:round;stroke-width:12;fill:none;transition:stroke-dashoffset .5s ease}
     .progress .inside{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-    .progress .inside .big{font-weight:900;font-size:18px;display:inline-block;white-space:nowrap;transform-origin:center center}
+    .progress .inside .big{
+      font-weight:900;
+      font-size:20px; /* как в пончике */
+      display:inline-block;
+      white-space:nowrap;
+      transform-origin:center center;
+    }
 
     .goal-controls{display:flex;gap:8px;align-items:center}
     input[type=number]{width:140px;background:#0a0f1d;color:var(--text);border:1px solid rgba(148,163,184,.4);border-radius:12px;padding:10px 12px}
@@ -336,8 +342,10 @@
                 <circle class="ring-fg" id="goalFg" cx="65" cy="65" r="52" stroke-dasharray="327" stroke-dashoffset="327" />
               </svg>
               <div class="inside">
-                <div class="big" id="goalNumbers">0.0 / 3.0 л</div>
-                <div class="muted" id="goalPercent">0%</div>
+                <div class="inside-center" style="text-align:center">
+                  <div class="big" id="goalCurrent">0.0 л</div>
+                  <div class="muted" id="goalSub">из 3.0 л • 0%</div>
+                </div>
               </div>
             </div>
             <div>
@@ -566,8 +574,8 @@
 
     // Прогресс
     const goalFg = document.getElementById('goalFg');
-    const goalNumbers = document.getElementById('goalNumbers');
-    const goalPercent = document.getElementById('goalPercent');
+    const goalCurrent = document.getElementById('goalCurrent');
+    const goalSub     = document.getElementById('goalSub');
     const goalInput   = document.getElementById('goalInput');
     const saveGoalBtn = document.getElementById('saveGoalBtn');
     let currentGoalMl = 3000; const CIRC = 2 * Math.PI * 52;
@@ -625,9 +633,20 @@
     const keysFor=(date=new Date())=>({ dateStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`, monthStr:`${date.getFullYear()}-${pad(date.getMonth()+1)}`, yearStr:`${date.getFullYear()}` });
 
     function setRingProgress(ratio){ const clamped = Math.max(0, Math.min(1, ratio || 0)); goalFg.setAttribute('stroke-dasharray', String(CIRC)); goalFg.setAttribute('stroke-dashoffset', String(CIRC * (1 - clamped))); }
-    function fitGoalText(){ const wrap = document.querySelector('.progress .inside'); if (!wrap || !goalNumbers) return; goalNumbers.style.transform = 'scale(1)'; const maxW = Math.max(10, wrap.clientWidth - 12); const w = goalNumbers.scrollWidth; goalNumbers.style.transform = `scale(${Math.min(1, maxW / w)})`; }
+    function fitGoalText(){ /* no-op: центр как у пончика, авто-масштаб не нужен */ }
     window.addEventListener('resize',(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>{fitGoalText(); drawDonut();},120);}})());
-    function updateProgressUI(water_ml){ const goal = Math.max(0, currentGoalMl || 0); const ratio = goal > 0 ? water_ml / goal : 0; setRingProgress(ratio); goalNumbers.textContent = `${(water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} / ${(goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л`; goalPercent.textContent = `${Math.round(Math.max(0, Math.min(100, ratio*100)))}%`; fitGoalText(); }
+    function updateProgressUI(water_ml){
+      const goal = Math.max(0, currentGoalMl || 0);
+      const ratio = goal > 0 ? water_ml / goal : 0;
+      setRingProgress(ratio);
+
+      const curL = (water_ml/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
+      const goalL= (goal/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2});
+      const pct  = Math.round(Math.max(0, Math.min(100, ratio*100)));
+
+      goalCurrent.textContent = `${curL} л`;
+      goalSub.textContent     = `из ${goalL} л • ${pct}%`;
+    }
 
     // Beverages UI
     let currentBevKey = 'water';
