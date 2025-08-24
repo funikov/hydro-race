@@ -243,7 +243,7 @@
       </section>
 
       <section class="card" id="lbCard" aria-labelledby="lbTitle">
-        <div class="row" style="justify-content: space между; align-items: baseline; gap: 8px;">
+        <div class="row" style="justify-content: space-between; align-items: baseline; gap: 8px;">
           <h2 id="lbTitle">Таблица лидеров</h2>
           <div class="row" style="gap:8px; flex-wrap:wrap;">
             <div class="tabs" role="tablist">
@@ -365,7 +365,7 @@
     import { getFirestore, doc, setDoc, serverTimestamp, writeBatch, collection, onSnapshot, orderBy, limit, query, getDocs, increment, where, collectionGroup, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyCnoxLZYkISwWWm8z2H_lhzfCj6lscQxUY",
+      apiKey: "AIzaSyCnoxLZYkISwWWм8з2H_lhzfCj6lscQxUY",
       authDomain: "hydro-race.firebaseapp.com",
       projectId: "hydro-race",
       storageBucket: "hydro-race.firebasestorage.app",
@@ -670,19 +670,18 @@
     }
     function renderHourChart(){
       hourChart.innerHTML='';
-      const total = hourData.reduce((a,b)=>a+b,0);
-      hourEmpty.style.display = total > 0 ? 'none' : 'block';
-      const defaultMax = 1000, defaultStep = 250;
-      if (total <= 0) { renderYAxis(defaultMax, defaultStep); syncHeights(); return; }
+      const posSum = hourData.reduce((s,v)=> s + (v>0 ? v : 0), 0);
+      hourEmpty.style.display = posSum > 0 ? 'none' : 'block';
 
-      const max = Math.max(1, ...hourData);
-      const step = niceStep(max, 4);
-      const niceMax = Math.ceil(max / step) * step;
-      renderYAxis(niceMax, step);
+      const maxPos = Math.max(1, ...hourData.map(v=>Math.max(0,v)));
+      const step   = niceStep(maxPos, 4);
+      const niceMax= Math.ceil(maxPos / step) * step;
+      renderYAxis(niceMax || 1000, step || 250);
 
       for(let i=0;i<24;i++){
         const bar=document.createElement('div'); bar.className='hour-bar';
-        const ratio = hourData[i] / (niceMax || 1);
+        const val = Math.max(0, hourData[i]); // отрицательные не рисуем вниз
+        const ratio = val / (niceMax || 1);
         bar.style.height = Math.max(8, Math.round(120*ratio))+'px';
         bar.title = `${i}:00 — ${hourData[i].toLocaleString()} мл`;
         hourChart.appendChild(bar);
@@ -692,39 +691,38 @@
 
     /* ====== Ачивки ====== */
     const ACH_DEFS = [
-      // Базовые
       { id:'first_liter', name:'Первый литр', desc:'1 л за день' },
       { id:'goal_today',  name:'Цель достигнута', desc:'Выполнить дневную цель' },
       { id:'streak_3',    name:'Серия ×3', desc:'3 дня подряд' },
       { id:'streak_7',    name:'Серия ×7', desc:'7 дней подряд' },
 
-      // Объём за день / цель (ДНЕВНЫЕ)
+      // Дневные по объёму/цели
       { id:'half_goal',        name:'Разогрелся', desc:'≥50% дневной цели' },
       { id:'camel_4l',         name:'Верблюд', desc:'≥4.0 л за день' },
       { id:'double_goal',      name:'Двойной удар', desc:'≥200% дневной цели' },
       { id:'precision_sniper', name:'Снайпер', desc:'В пределах ±100 мл от цели' },
       { id:'morning_goal',     name:'Ранний финиш', desc:'Цель до 15:00' },
 
-      // Серии (НЕ дневные)
+      // Серии
       { id:'streak_14', name:'Две недели', desc:'Серия 14' },
       { id:'streak_30', name:'Железный', desc:'Серия 30' },
       { id:'perfect_week_7', name:'Идеальная неделя', desc:'7/7 дней этой недели' },
       { id:'monthly_20', name:'Месячный марафон', desc:'≥20 дней в месяце' },
       { id:'comeback', name:'Камбек', desc:'После провала — выполнено' },
 
-      // Долгосрочные (НЕ дневные)
+      // Долгосрочные
       { id:'lifetime_100l', name:'Сотня', desc:'100 л всего' },
       { id:'lifetime_500l', name:'Пол-океана', desc:'500 л всего' },
       { id:'lifetime_1000l', name:'Тысяча', desc:'1000 л всего' },
 
-      // Поведение (ДНЕВНЫЕ)
+      // Поведение (дневные)
       { id:'early_bird',  name:'Жаворонок', desc:'Первый приём до 09:00' },
       { id:'night_owl',   name:'Сова', desc:'Приём после 22:00' },
       { id:'hourly_6',    name:'Ниндзя часов', desc:'В 6+ разных часах суток' },
       { id:'pacer_10',    name:'Ровный темп', desc:'10+ добавлений за день' },
       { id:'no_corrections', name:'Без правок', desc:'Без отрицательных добавлений' },
 
-      // Разнообразие (ДНЕВНЫЕ)
+      // Разнообразие (дневные)
       { id:'diversity_4',   name:'Дегустатор', desc:'4+ типов напитков за день' },
       { id:'pure_water_day',name:'Кристально', desc:'Только вода за день' },
     ];
@@ -772,7 +770,7 @@
       pure_water_day:   badge('#0ea5e9','💧'),
     };
 
-    /* === Только для одной ачивки — подключаем PNG === */
+    /* === PNG для конкретных ачивок === */
     const ASSETS_BASE = './assets/ach/';
     const ACH_IMG = Object.freeze({
       first_liter: `${ASSETS_BASE}first_liter.png`,
@@ -959,37 +957,59 @@
       ctx.setTransform(dpr,0,0,dpr,0,0);
       ctx.clearRect(0,0,W,H);
 
-      const entries = Object.entries(compMap).filter(([k,v])=>v>0);
-      const total = entries.reduce((s,[,v])=>s+v,0);
-      donutTotalEl.textContent = (total/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}) + ' л';
+      const allEntries = Object.entries(compMap);               // тут есть и отрицательные
+      const totalAll   = allEntries.reduce((s,[,v])=> s + v, 0); // общий итог с минусами
+      donutTotalEl.textContent = (totalAll/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2}) + ' л';
 
-      donutEmpty.style.display = total>0 ? 'none':'block';
+      // Для визуализации сегментов берём только положительные
+      const posEntries = allEntries.filter(([,v])=> v>0).sort((a,b)=> b[1]-a[1]);
+      const totalPos   = posEntries.reduce((s,[,v])=> s + v, 0);
+
       donutLegend.innerHTML = '';
-
       const cx = W/2, cy = H/2, R = 100, r = 66;
-      if (total <= 0){
+
+      if (totalPos <= 0){
+        // пустое кольцо
         ctx.globalAlpha = .18;
         ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.arc(cx,cy,r,Math.PI*2,0,true);
         ctx.closePath(); ctx.fillStyle = '#ffffff22'; ctx.fill(); ctx.globalAlpha = 1;
-        syncHeights(); return;
+
+        // легенда всё равно показывает нетто по типам
+        allEntries.forEach(([key,val],i)=>{
+          const bev = BEV_BY_KEY[key] || { name:key };
+          const node = document.createElement('div');
+          node.className = 'legend-item';
+          node.innerHTML = `
+            <div class="legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></div>
+            <div>
+              <div>${bev.name}</div>
+              <div class="legend-sub">${(val/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л • —</div>
+            </div>`;
+          donutLegend.appendChild(node);
+        });
+        syncHeights();
+        return;
       }
 
+      // Сегменты по положительным
       let start = -Math.PI/2; const gap = 0.02;
-      entries.sort((a,b)=>b[1]-a[1]).forEach(([key,val],i)=>{
-        const frac = val/total; const ang  = Math.max(0.04, frac * Math.PI*2) - gap; const end  = start + ang;
+      posEntries.forEach(([key,val],i)=>{
+        const frac = val/totalPos; const ang = Math.max(0.04, frac*Math.PI*2) - gap; const end = start + ang;
         ctx.beginPath(); ctx.arc(cx,cy,R,start,end); ctx.arc(cx,cy,r,end,start,true); ctx.closePath();
         ctx.fillStyle = PALETTE[i % PALETTE.length]; ctx.fill(); start = end + gap;
       });
 
-      entries.forEach(([key,val],i)=>{
-        const bev = BEV_BY_KEY[key] || { name: key };
+      // Легенда: положительные с %, отрицательные — без %
+      allEntries.sort((a,b)=> b[1]-a[1]).forEach(([key,val],i)=>{
+        const bev = BEV_BY_KEY[key] || { name:key };
+        const pct = val > 0 ? Math.round((val/totalPos)*100)+'%' : '—';
         const node = document.createElement('div');
         node.className = 'legend-item';
         node.innerHTML = `
           <div class="legend-dot" style="background:${PALETTE[i % PALETTE.length]}"></div>
           <div>
-            <div>${bev.name || key}</div>
-            <div class="legend-sub">${(val/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л • ${Math.round((val/Math.max(1,total))*100)}%</div>
+            <div>${bev.name}</div>
+            <div class="legend-sub">${(val/1000).toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:2})} л • ${pct}</div>
           </div>`;
         donutLegend.appendChild(node);
       });
@@ -1026,7 +1046,8 @@
           const ts=it.ts?.toDate ? it.ts.toDate() : new Date();
           const h=(ts instanceof Date) ? ts.getHours() : 0;
           const ml = it.ml || 0;
-          const wml = Math.max(0, it.water_ml ?? Math.round(ml * (it.factor||1)));
+          // ВАЖНО: не обнуляем минусы
+          const wml = (it.water_ml != null) ? it.water_ml : Math.round(ml * (it.factor||1));
           if (h>=0 && h<24) hourData[h] += wml;
           const key = it.beverage || 'unknown';
           compMap[key] = (compMap[key]||0) + wml;
@@ -1103,7 +1124,7 @@
         if (monthHits >= 20) await recordAchievement('monthly_20', { dateStr: todayStr, count: monthHits });
       }
 
-      // Долгосрочные (постоянные)
+      // Долгосрочные
       const life = await lifetimeTotalWater(user.uid);
       if (life >= 100*1000)  await recordAchievement('lifetime_100l',  { total_ml: life });
       if (life >= 500*1000)  await recordAchievement('lifetime_500l', { total_ml: life });
