@@ -774,9 +774,12 @@
 
     /* === Только для одной ачивки — подключаем PNG === */
     const ASSETS_BASE = './assets/ach/';
-    const ACH_IMG = {
-      first_liter: ASSETS_BASE + 'first_liter.png', // картинка с прозрачностью 1024x1024
-    };
+    const ACH_IMG = Object.freeze({
+      first_liter: `${ASSETS_BASE}first_liter.png`,
+      goal_today:  `${ASSETS_BASE}goal_today.png`,
+      streak_3:    `${ASSETS_BASE}streak_3.png`,
+      streak_7:    `${ASSETS_BASE}streak_7.png`,
+    });
     function achMarkup(id, alt, fallbackSvg) {
       const src = ACH_IMG[id];
       if (src) {
